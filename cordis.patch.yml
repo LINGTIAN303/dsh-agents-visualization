@@ -1,0 +1,15 @@
+# ============================================================================
+# dsh-agents-visualization —— DSH bundle patch
+# ============================================================================
+# 插件挂载声明：DSH 启动时把本插件插进 profile 的配置树。
+#
+# 本插件半边职责：
+#   · Host 半边  index.js  —— 提供 /dsh-agents-visualization/api 读写接口
+#   · Client 半边 client.js —— 在「设置」里注册一个页面（settings.section）
+#
+# 注意：id 必须与包名一致，否则设置页会加载不到；该行也不要在行尾写注释。
+# ============================================================================
+
+- insert:
+    - id: dsh-agents-visualization
+      name: dsh-agents-visualization

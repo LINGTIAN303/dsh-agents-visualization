@@ -1,0 +1,57 @@
+{
+  "name": "dsh-agents-visualization",
+  "version": "0.1.1",
+  "type": "module",
+  "description": "在 DSH 设置里可视化查看、创建与编辑 AGENTS.md：项目级跟随工作区目录链，全局级覆盖 ~/.dsh 与 ~/.agents，并集中管理 25+ 个第三方 AI 工具的规则文件。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "agents-md",
+    "rules",
+    "settings",
+    "cursor",
+    "claude-code",
+    "codex",
+    "trae",
+    "codebuddy"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "CHANGELOG.md"
+  ],
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "inject": []
+    },
+    "compatibility": {
+      "dshReleases": {
+        "0.2.1-rc.5": "compatible"
+      }
+    }
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LINGTIAN303/dsh-agents-visualization.git"
+  },
+  "homepage": "https://github.com/LINGTIAN303/dsh-agents-visualization#readme",
+  "bugs": {
+    "url": "https://github.com/LINGTIAN303/dsh-agents-visualization/issues"
+  },
+  "license": "MIT"
+}

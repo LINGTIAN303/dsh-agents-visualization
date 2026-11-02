@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AGENTS.md viewer">
+  <!-- 文档底板：圆角矩形 + 右上折角，表示一份指令文件 -->
+  <path d="M16 8h22l10 10v38a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4V12a4 4 0 0 1 4-4z"
+        fill="#247bbf" opacity="0.12"/>
+  <path d="M38 8l10 10H42a4 4 0 0 1-4-4V8z" fill="#247bbf" opacity="0.38"/>
+
+  <!-- 文档外轮廓 -->
+  <path d="M16 8h22l10 10v38a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4V12a4 4 0 0 1 4-4z"
+        fill="none" stroke="#247bbf" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M38 8v6a4 4 0 0 0 4 4h6" fill="none" stroke="#247bbf" stroke-width="3"
+        stroke-linejoin="round"/>
+
+  <!-- 正文行：长短交错，表示 Markdown 文本 -->
+  <g stroke="#247bbf" stroke-width="3" stroke-linecap="round">
+    <path d="M20 27h16"/>
+    <path d="M20 35h24"/>
+    <path d="M20 43h12"/>
+  </g>
+
+  <!-- 层级标记：外层方框套内层实心点，表示「全局 / 项目」两级作用域 -->
+  <circle cx="46" cy="48" r="11" fill="#ffffff"/>
+  <circle cx="46" cy="48" r="11" fill="none" stroke="#247bbf" stroke-width="2.5"/>
+  <circle cx="46" cy="48" r="3.5" fill="#247bbf"/>
+</svg>

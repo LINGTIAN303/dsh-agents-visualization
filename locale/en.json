@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Rules",
+    "description": "View, create, and edit AGENTS.md inside Settings: project scope follows the workspace directory chain, global scope covers both ~/.dsh and ~/.agents. The preview renders Markdown."
+  }
+}

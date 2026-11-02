@@ -1,0 +1,9 @@
+# 统一换行符，避免 Windows 上检出成 CRLF 污染源码
+* text=auto eol=lf
+
+# 二进制文件不做换行转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
