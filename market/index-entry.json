@@ -1,0 +1,46 @@
+{
+  "name": "dsh-agents-visualization",
+  "title": {
+    "zh": "规则（AGENTS.md 可视化）",
+    "en": "Rules (AGENTS.md Viewer)"
+  },
+  "description": {
+    "zh": "在设置里集中查看、创建与编辑 AGENTS.md 等 AI 规则文件：项目级跟随工作区目录链，全局级覆盖 ~/.dsh 与 ~/.agents，并管 25+ 个第三方工具的规则。",
+    "en": "View, create and edit AGENTS.md and other AI rule files from Settings: project scope follows the workspace directory chain, global scope covers ~/.dsh and ~/.agents, plus 25+ third-party tools."
+  },
+  "repository": {
+    "url": "https://github.com/LINGTIAN303/dsh-agents-visualization"
+  },
+  "metadata": {
+    "category": "tools",
+    "keywords": [
+      "dsh",
+      "dsh-plugin",
+      "deepseek-harness",
+      "agents-md",
+      "rules",
+      "settings",
+      "cursor",
+      "claude-code",
+      "codex",
+      "trae",
+      "codebuddy",
+      "opencode",
+      "windsurf",
+      "cline"
+    ]
+  },
+  "versions": [
+    {
+      "version": "0.1.1",
+      "publishTimestamp": 1793561452,
+      "source": {
+        "type": "npm",
+        "registry": "https://registry.npmjs.org/"
+      },
+      "engines": {
+        "dsh": ">=0.2.1-rc.5 <0.3.0-0"
+      }
+    }
+  ]
+}
