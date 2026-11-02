@@ -1,0 +1,6 @@
+url: https://github.com/LINGTIAN303/dsh-agents-visualization
+name: LINGTIAN303/dsh-agents-visualization
+category: tools
+description:
+  en: Views, creates and edits AGENTS.md and other AI rule files from the DSH settings page, covering the project directory chain, both DSH global roots, and 25 third-party tool rule files.
+  zh: 在 DSH 设置页查看、创建与编辑 AGENTS.md 等 AI 规则文件，覆盖项目目录链、DSH 的两个全局根，以及 25 个第三方工具的规则文件。
