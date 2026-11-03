@@ -1,6 +1,6 @@
 {
   "name": "dsh-agents-visualization",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "在 DSH 设置里可视化查看、创建与编辑 AGENTS.md：项目级跟随工作区目录链，全局级覆盖 ~/.dsh 与 ~/.agents，并集中管理 25+ 个第三方 AI 工具的规则文件。",
   "keywords": [
@@ -31,7 +31,9 @@
     "CHANGELOG.md"
   ],
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "inject": []

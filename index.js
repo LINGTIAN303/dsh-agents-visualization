@@ -512,26 +512,6 @@ function readBody(req) {
 }
 
 /**
- * 判断一台主机名是否是回环地址（契约允许的三种写法）。
- * @param {string} hostname - 已归一化的小写主机名。
- * @returns {boolean} 是否回环。
- */
-function isLoopbackHostname(hostname) {
-  return hostname === '127.0.0.1' || hostname === 'localhost' || hostname === '[::1]' || hostname === '::1'
-}
-
-/**
- * 从 Host 头里取出主机名（IPv6 保留方括号）。
- * @param {unknown} hostHeader - req.headers.host 的原始值。
- * @returns {string} 小写主机名，缺失时为空串。
- */
-function hostnameOf(hostHeader) {
-  const host = String(hostHeader ?? '').toLowerCase()
-  if (host === '') return ''
-  return host.startsWith('[') ? host.slice(0, host.indexOf(']') + 1) : host.split(':')[0]
-}
-
-/**
  * 从 Cordis 上下文读一个可选服务；缺失或上下文已失活时返回 undefined。
  * @param {any} ctx - Cordis 上下文。
  * @param {string} name - 服务名。
@@ -552,20 +532,38 @@ function getService(ctx, name) {
  * @param {import('node:http').IncomingMessage} req - node:http 请求对象。
  * @returns {0|number} 0 表示放行，否则是要回的 HTTP 状态码。
  */
+/**
+ * 信任栅栏。优先用 connection.requestRejection（同步，返回 401/403 或 undefined）。
+ *
+ * 安全模型（fail-closed）：这个接口能读写用户的**全局规则文件**，
+ * 一旦被未认证请求打中，攻击者就能往 AGENTS.md 里注入指令。
+ * 因此 `connection` 缺失时**直接拒绝**，不退化、不猜：
+ *
+ *   · 曾经的做法是「Host 头是回环就放行」，这并不安全 ——
+ *     `Host` 由请求方自己填写，伪造 `Host: 127.0.0.1` 即可绕过；
+ *     浏览器侧的 DNS rebinding 也能把恶意域名解析到 127.0.0.1 后再发请求。
+ *     回环地址只说明「连到了本机」，不说明「调用方可信」。
+ *   · 校验 Origin / 登录态只有 connection 服务能做；没有它就没有可信依据，
+ *     唯一安全的选择是拒绝。
+ *
+ * @param {any} ctx - Cordis 上下文。
+ * @param {import('node:http').IncomingMessage} req - node:http 请求对象。
+ * @returns {number} 0 表示放行，否则是要回的 HTTP 状态码。
+ */
 function trustRejection(ctx, req) {
   const connection = getService(ctx, 'connection')
-  if (connection && typeof connection.requestRejection === 'function') {
-    try {
-      const rejection = connection.requestRejection(req)
-      if (rejection === undefined || rejection === null || rejection === false) return 0
-      return typeof rejection === 'number' ? rejection : 403
-    } catch {
-      // 栅栏自身抛错时必须是拒绝而不是放行。
-      return 403
-    }
+  if (connection === undefined || typeof connection.requestRejection !== 'function') {
+    // 没有认证服务 → 无法判断请求是否可信 → 一律拒绝（fail-closed）。
+    return 503
   }
-  // connection 服务缺失：只信任回环 Host，其余一律 403。
-  return isLoopbackHostname(hostnameOf(req?.headers?.host)) ? 0 : 403
+  try {
+    const rejection = connection.requestRejection(req)
+    if (rejection === undefined || rejection === null || rejection === false) return 0
+    return typeof rejection === 'number' ? rejection : 403
+  } catch {
+    // 栅栏自身抛错时必须是拒绝而不是放行。
+    return 403
+  }
 }
 
 // ============================================================================
@@ -1759,23 +1757,23 @@ export default {
   // 结果是某个服务没被注入、插件静默什么都不做（不报错）。
   //
   // 为什么 connection 不写进 inject：它是可选服务（无浏览器的 profile 里不存在），
-  // 写死会让插件整个不加载。但它是安全栅栏的唯一来源，缺了会降级成「只看回环 Host」，
-  // 所以 apply 里会显式检查并大声警告（见下），而不是无声降级。
+  // 写死会让插件整个不加载。但它是安全栅栏的唯一来源 —— 缺了就没有可信依据，
+  // 因此 trustRejection 会 fail-closed 拒绝全部请求（503），并在 apply 里大声警告。
   inject: ['webServer', 'workspaceRegistry'],
   /**
    * 注册前缀路由。路由随 Cordis fiber 一起销毁（ctx.effect 收集返回的 disposer）。
    * @param {any} ctx - Cordis 上下文。
    */
   apply(ctx) {
-    // 安全自查：能读写用户全局规则文件的插件，弱栅栏代价太大。
-    // connection 缺失时 trustRejection 只能退化为「Host 是否回环」，
-    // 不再校验 Origin / 登录态 —— 必须让用户在日志里看得见。
+    // 安全自查：能读写用户全局规则文件的插件，不能承受弱栅栏。
+    // connection 缺失时 trustRejection 会拒绝全部请求（fail-closed），
+    // 这里提前把原因写进日志，免得用户看到 503 不知道怎么回事。
     try {
       const connection = ctx.get('connection')
       if (connection === undefined || typeof connection.requestRejection !== 'function') {
         ctx.logger?.warn?.(
-          `[${PLUGIN_NAME}] connection 服务不可用：HTTP 接口降级为「仅回环 Host」信任模型，` +
-            '不再校验 Origin 与登录态。若本机以外的来源可访问该端口，请先修复 connection 服务。',
+          `[${PLUGIN_NAME}] connection 服务不可用：无法校验请求的 Origin 与登录态，` +
+            'HTTP 接口将拒绝全部请求（fail-closed，返回 503）。请先修复 connection 服务。',
         )
       }
     } catch {
