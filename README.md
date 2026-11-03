@@ -87,9 +87,13 @@ Claude Code · Codex CLI · Gemini CLI · Cursor · TRAE / TRAE CN · CodeBuddy 
 ## 安全说明
 
 - 插件只在本机回环地址上提供 HTTP 接口，并经过 DSH 的 `connection.requestRejection` 信任校验。
+- **信任栅栏是 fail-closed 的**：`connection` 服务不可用时无法校验请求的 Origin 与登录态，此时接口**拒绝全部请求**（返回 503），而不是退化成「看 Host 是否回环就放行」。
+  这一点很重要 —— `Host` 由请求方自己填写（伪造 `Host: 127.0.0.1` 即可绕过），浏览器侧的 DNS rebinding 也能把恶意域名解析到回环地址后发起请求。回环只说明「连到了本机」，不说明「调用方可信」；而本插件能改写用户的全局规则文件。
 - 前端只发送文件 key，**不发绝对路径**；服务端每次请求重新计算允许集合再按 key 查表，因此无法通过伪造 key 读到白名单之外的文件。
 - 写入走「同目录临时文件 + rename」原子替换，UTF-8 无 BOM。
 - 单文件上限 1 MiB；符号链接若指向用户主目录之外，不会纳入可编辑范围。
+
+> **安全公告**：`0.1.1` 及更早版本在 `connection` 缺失时会退化为回环 Host 检查，可被伪造 `Host` 头或 DNS rebinding 绕过。**请使用 `0.1.2` 或更高版本**，详见 [CHANGELOG](./CHANGELOG.md)。
 
 ## 兼容性
 
@@ -166,9 +170,13 @@ Persisted to `~/.dsh/agents-visualization.json`:
 ## Security
 
 - The HTTP endpoint listens on loopback only and passes DSH's `connection.requestRejection` trust check.
+- **The trust fence is fail-closed.** When the `connection` service is unavailable there is no way to check a request's Origin or login state, so the endpoint **refuses every request** (HTTP 503) rather than degrading to a loopback-Host check.
+  This matters: `Host` is written by the caller (a forged `Host: 127.0.0.1` would pass), and DNS rebinding can resolve an attacker's domain to a loopback address before the request is sent. Loopback only proves the connection reached this machine, not that the caller is trusted — and this plugin can rewrite the user's global rule files.
 - The browser sends **file keys, never absolute paths**; the server recomputes the allow-list on every request, so a forged key cannot reach arbitrary files.
 - Writes are atomic (temp file + rename), UTF-8 without BOM, capped at 1 MiB per file.
 - Symlinks pointing outside the user's home directory are excluded from the editable set.
+
+> **Security advisory**: `0.1.1` and earlier fell back to a loopback-Host check when `connection` was missing, which a forged `Host` header or DNS rebinding could bypass. **Use `0.1.2` or later.** See [CHANGELOG](./CHANGELOG.md).
 
 ## Compatibility
 
