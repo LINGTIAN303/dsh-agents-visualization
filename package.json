@@ -1,8 +1,8 @@
 {
   "name": "dsh-agents-visualization",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "type": "module",
-  "description": "在 DSH 设置里可视化查看、创建与编辑 AGENTS.md：项目级跟随工作区目录链，全局级覆盖 ~/.dsh 与 ~/.agents，并集中管理 25+ 个第三方 AI 工具的规则文件。",
+  "description": "在 DSH 设置里可视化查看、创建与编辑 AGENTS.md：项目级跟随工作区目录链，全局级覆盖 ~/.dsh 与 ~/.agents，并按工具子 Tab 集中管理 25+ 个第三方 AI 工具的规则文件（含注入字节 / 字数 / token 统计）。",
   "keywords": [
     "dsh",
     "dsh-plugin",

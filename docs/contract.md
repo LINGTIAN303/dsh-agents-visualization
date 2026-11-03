@@ -11,7 +11,7 @@
 |---|---|
 | 项目级 | 所选工作区从项目根到 cwd 的目录链 |
 | 全局级 | `~/.dsh/AGENTS.md` 与 `~/.agents/AGENTS.md` |
-| 第三方集中 | 各 AI 工具的用户级规则文件（不含项目级） |
+| 第三方集中 | 各 AI 工具的用户级规则文件（不含项目级），子 Tab 按工具切换 |
 
 不提供删除操作（只做创建 / 编辑 / 修改），也不注册 Agent 工具。
 
@@ -125,6 +125,20 @@
   "files": [ FileEntry, ... ]
 }
 ```
+
+`FileEntry.stats`（注入统计，仅第三方且 exists 时有值，否则为 `null`）：
+
+```jsonc
+{
+  "injectBytes": 1200,   // 剥 YAML frontmatter + trim 后的有效内容 UTF-8 字节数
+  "chars": 320,          // 有效内容的字符数（按码点计，代理对不拆分）
+  "tokens": 210          // 启发式估算：CJK 1 字 ≈ 1 token，其余 4 字符 ≈ 1 token
+}
+```
+
+**注入口径**：`injectBytes` 代表工具真正注入上下文的有效内容（frontmatter 是元数据，
+不会注入）。`tokens` 是启发式估算而非精确分词，仅供量级参考；客户端编辑器里的实时
+统计（client.js `injectionStats`）与 Host 必须保持同一口径，否则详情与清单对不上。
 
 ### 3.3 `GET /read?workspaceId=<可选>&key=<key>`
 
@@ -245,8 +259,12 @@ key 只由 Host 生成与校验；**客户端永远不发送绝对路径**。
 - `ctx.effect` 内 `ctx.locale.register('agents-md', { zh, en })`
 - 注册 `settings.section`：`{ name: 'settings.section', id: 'agents-md', order: 8, label: () => t('nav') }`
 - 三个 Tab：**项目级 / 全局级 / 第三方集中**
+- 第三方集中 Tab 内部用**子 Tab 切换各 Agent 工具**：已安装工具各占一个子 Tab
+  （头部带文件数与 token 汇总角标），「自定义工具」固定为最后一个子 Tab；
+  未安装的工具仍折叠在底部「未检测到」块。切换工具即切换文件集合（选中态清空）
 - 详情面板内联在选中项下方展开（不堆在页面底部，否则用户点完看不到变化）
-- 第三方 Tab 顶部常驻「自定义工具」编辑区，预填模板，保存到 `~/.dsh/agents-visualization.json`
+- 详情面板展示四项指标：**占用字节 / 注入字节 / 已用字数 / token 占用（估算）**；
+  编辑器底栏实时显示注入字节 / 字数 / token（敲键盘即更新，与 Host 同口径）
 - 只用 `--dsw-alias-*` 主题 token 着色；不引入任何 Harness Client 包
 - 图标用内联 SVG，禁止 emoji
 - 所有可见文案走 `t()`，zh / en 两套字典

@@ -31,7 +31,7 @@ DSH 社区共有多个插件索引源，收录机制分三类：**人工审核�
 
 **收录要求**（官方 README 原文归纳）：
 - 公开源码 ✅
-- 有可安装的 npm 版本 ✅（`dsh-agents-visualization@0.1.1`）
+- 有可安装的 npm 版本 ✅（`dsh-agents-visualization@0.1.4`）
 - 明确的许可证 ✅（MIT）
 - 有 Logo 与完善描述的优先 ✅
 
@@ -69,12 +69,12 @@ DSH 社区共有多个插件索引源，收录机制分三类：**人工审核�
 
 ## 索引条目格式（供参考）
 
-`index-entry.json` 是标准 format-1 索引条目，与 npm 上 `0.1.1` 的实际元数据对齐：
+`index-entry.json` 是标准 format-1 索引条目，与 npm 上的实际元数据对齐（当前最新 `0.1.4`）：
 
 | 项 | 值 |
 |---|---|
-| version | `0.1.1` |
-| publishTimestamp | `1793561452`（2026-11-02T03:30:52Z） |
+| version | `0.1.4` |
+| publishTimestamp | `1793804145`（2026-11-03T18:55:45Z） |
 | source | `npm` / `https://registry.npmjs.org/` |
 | engines.dsh | `>=0.2.1-rc.5 <0.3.0-0` |
 | shasum | `4cb36b903c62af2bdd4c0f7f9cd33496f51e498b` |

@@ -168,6 +168,11 @@ window.__ModuleLoader__.load({
       '.amv-absent-item{display:flex;align-items:baseline;gap:8px;font-size:11.5px;line-height:17px;color:var(--dsw-alias-label-secondary);flex-wrap:wrap}',
       '.amv-absent-dir{font-family:' + MONO + ';font-size:10.5px;line-height:15px;opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.amv-tool-note{display:flex;align-items:flex-start;gap:6px;padding:6px 11px;font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary);border-bottom:.5px solid var(--dsw-alias-border-l2)}',
+      // 第三方子Tab：横向可滚动的工具切换条（工具多时收进滚动，不换行撑高页面）
+      '.amv-subtabs{display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--dsw-alias-bg-layer-2);overflow-x:auto;max-width:100%;scrollbar-width:thin}',
+      '.amv-subtab{appearance:none;border:none;background:transparent;color:var(--dsw-alias-label-secondary);font-family:inherit;font-size:12px;line-height:18px;padding:3px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:5px}',
+      '.amv-subtab:hover{color:var(--dsw-alias-label-primary)}',
+      '.amv-subtab[aria-selected=true]{background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 0 0 .5px var(--dsw-alias-border-l2)}',
       // 自定义工具面板
       '.amv-custom{display:flex;flex-direction:column;border:.5px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-1);overflow:hidden}',
       '.amv-custom-hd{display:flex;align-items:center;gap:7px;padding:7px 11px;background:var(--dsw-alias-bg-layer-2);flex-wrap:wrap}',
@@ -185,6 +190,10 @@ window.__ModuleLoader__.load({
       '.amv-textarea:focus-visible{box-shadow:inset 0 0 0 1px var(--dsw-alias-brand-primary)}',
       '.amv-editor-bar{display:flex;align-items:center;gap:8px;padding:6px 11px;background:var(--dsw-alias-bg-layer-2);border-top:.5px solid var(--dsw-alias-border-l2);flex-wrap:wrap}',
       '.amv-stat{font-size:11.5px;line-height:17px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums}',
+      // 指标行：详情面板 / 工具头部共用的一组「标签+值」
+      '.amv-metrics{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:11.5px;line-height:17px;font-variant-numeric:tabular-nums}',
+      '.amv-metrics-label{color:var(--dsw-alias-label-secondary)}',
+      '.amv-metrics-value{color:var(--dsw-alias-label-primary)}',
       '.amv-kbd{font-family:' + MONO + ';font-size:10.5px;line-height:15px;padding:0 4px;border-radius:4px;border:.5px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary)}',
       '.amv-dirty{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;line-height:17px;color:var(--dsw-alias-state-warn-primary)}',
       '.amv-over{font-size:11.5px;line-height:17px;color:var(--dsw-alias-state-error-primary)}',
@@ -227,10 +236,20 @@ window.__ModuleLoader__.load({
       globalEmpty: '没法解析全局目录（配置缺失），全局级暂时不可用。',
       thirdEmpty: '没有可扫描的第三方工具。',
       thirdNoRules: '这个工具已安装，但还没有写规则文件。',
-      thirdNoneInstalled: '没有检测到任何已安装的第三方工具。',
       thirdAbsentTitle: '未检测到 {n} 个工具（配置目录不存在）',
       thirdShared: '内容与 {names} 完全相同',
       thirdTruncated: '目录内共 {total} 个规则文件，这里只列出前 {shown} 个。',
+      thirdFiles: '{n} 个文件',
+      customSubtab: '自定义工具',
+      metricOccupied: '占用字节',
+      metricInjected: '注入字节',
+      metricChars: '已用字数',
+      metricTokens: 'token 占用',
+      metricTokensApprox: '≈{n}',
+      metricSubtab: '{n} · ≈{t} token',
+      metricToolSummary: '共 {n} 个文件 · 注入 {b} · ≈{t} token',
+      metricInjectHint: '注入字节 = 剥离 YAML frontmatter、去首尾空白后的有效内容字节数（工具真正注入上下文的部分）。',
+      metricTokenHint: 'token 为启发式估算：中日韩字符按 1 字 ≈ 1 token，其余按 4 字符 ≈ 1 token，仅供量级参考。',
       confLow: '路径为推测',
       confLowTip: '该路径既无官方文档依据、本机也没有实测到，属于推测，请谨慎参考。',
       srcOfficial: '来源：官方文档',
@@ -312,10 +331,20 @@ window.__ModuleLoader__.load({
       globalEmpty: 'Global directories could not be resolved (missing configuration); global scope is unavailable.',
       thirdEmpty: 'No third-party tools to scan.',
       thirdNoRules: 'This tool is installed but has no rule files yet.',
-      thirdNoneInstalled: 'No installed third-party tools were detected.',
       thirdAbsentTitle: '{n} tools not detected (config directory missing)',
       thirdShared: 'Identical content to {names}',
       thirdTruncated: 'This directory has {total} rule files; only the first {shown} are listed.',
+      thirdFiles: '{n} files',
+      customSubtab: 'Custom tools',
+      metricOccupied: 'On-disk bytes',
+      metricInjected: 'Injected bytes',
+      metricChars: 'Characters',
+      metricTokens: 'Tokens (est.)',
+      metricTokensApprox: '≈{n}',
+      metricSubtab: '{n} · ≈{t} tok',
+      metricToolSummary: '{n} files · {b} injected · ≈{t} tokens',
+      metricInjectHint: 'Injected bytes = content after stripping YAML frontmatter and trimming whitespace — the part a tool actually injects into context.',
+      metricTokenHint: 'Tokens are heuristic estimates: CJK characters ≈ 1 token each, everything else ≈ 1 token per 4 characters.',
       confLow: 'Path inferred',
       confLowTip: 'This path is neither documented officially nor found on this machine; treat it as a guess.',
       srcOfficial: 'Source: official documentation',
@@ -404,6 +433,39 @@ window.__ModuleLoader__.load({
       if (v < 1024) return v + ' B';
       if (v < 1024 * 1024) return (v / 1024).toFixed(v < 10240 ? 1 : 0) + ' KB';
       return (v / 1048576).toFixed(1) + ' MB';
+    }
+
+    // ── 注入统计（与 Host 端 index.js 的 injectionStats 保持同一口径）────────
+    // 为什么客户端也算一份：编辑器里改内容时，四项指标要实时跟着跳动，
+    // 而不能等保存后再刷新清单；两端口径必须逐字一致，否则详情与清单对不上。
+
+    /** CJK 码点判定：中日韩表意文字 / 假名 / 谚文，1 字 ≈ 1 token。 */
+    const isCjkCodePoint = (cp) =>
+      (cp >= 0x4e00 && cp <= 0x9fff) ||
+      (cp >= 0x3400 && cp <= 0x4dbf) ||
+      (cp >= 0x20000 && cp <= 0x2a6df) ||
+      (cp >= 0xf900 && cp <= 0xfaff) ||
+      (cp >= 0x3040 && cp <= 0x30ff) ||
+      (cp >= 0xac00 && cp <= 0xd7af);
+
+    /**
+     * 按注入口径统计一段规则文本。
+     * 剥 YAML frontmatter → trim → 注入字节 / 字数 / 估算 token。
+     * @param {string} text - 原始文本。
+     * @returns {{ injectBytes: number, chars: number, tokens: number }}
+     */
+    function injectionStats(text) {
+      const source = typeof text === 'string' ? text : '';
+      const m = /^---[ \t]*\r?\n([\s\S]*?)\r?\n?---[ \t]*(?:\r?\n|$)/.exec(source);
+      const body = (m ? source.slice(m[0].length) : source).trim();
+      let cjk = 0;
+      let other = 0;
+      for (const ch of body) {
+        const cp = ch.codePointAt(0) || 0;
+        if (isCjkCodePoint(cp)) cjk++;
+        else other++;
+      }
+      return { injectBytes: utf8Bytes(body), chars: cjk + other, tokens: cjk + Math.ceil(other / 4) };
     }
 
     /** 本地时间 YYYY-MM-DD HH:mm（固定格式，不依赖浏览器 locale） */
@@ -846,6 +908,8 @@ window.__ModuleLoader__.load({
       // 自定义工具编辑：草稿是整份 JSON 文本，保存时整体提交（避免半残配置）
       const [customText, setCustomText] = useState('');
       const [customMsg, setCustomMsg] = useState(null);
+      // 第三方集中内部的子Tab：选中工具 id（'__custom__' = 自定义工具面板）
+      const [thirdTab, setThirdTab] = useState(null);
 
       const stateSeq = useRef(0); // /state 请求序号：丢弃过期响应
       const readSeq = useRef(0); // /read 请求序号：同上
@@ -937,6 +1001,8 @@ window.__ModuleLoader__.load({
       const truncated = !!(doc && doc.truncated);
       const dirty = docState === 'ready' && !!doc && draft !== (doc.content || '');
       const draftBytes = useMemo(() => utf8Bytes(draft), [draft]);
+      // 编辑器实时统计（注入字节 / 字数 / token）：口径与 Host 一致，敲键盘即更新
+      const draftStats = useMemo(() => injectionStats(draft), [draft]);
       const canEdit = docState === 'ready' && !truncated;
       const canSave = canEdit && dirty && !busy && draftBytes <= MAX_BYTES;
       const showEdit = mode === 'edit' && canEdit;
@@ -954,10 +1020,14 @@ window.__ModuleLoader__.load({
         setNotice('');
       }, []);
 
+      // 切换顶层 Tab 时把子Tab也复位，避免「上次选中的工具」串到下一次
+      const resetThirdTab = useCallback(() => setThirdTab(null), []);
+
       const switchTab = (next) => {
         if (next === tab) return;
         setTab(next);
         resetSelection();
+        if (next === 'third') resetThirdTab();
       };
 
       const selectEntry = (target) => {
@@ -1115,6 +1185,24 @@ window.__ModuleLoader__.load({
       };
 
       // ── 渲染小件 ────────────────────────────────────────────────────────
+      /** 详情面板的指标行：占用 / 注入 / 字数 / token（值来自 /read 实时内容或清单缓存）。 */
+      const metricsEl = (stats, size) =>
+        h(
+          'div',
+          { className: 'amv-metrics', title: t('metricInjectHint') + '\n' + t('metricTokenHint') },
+          h('span', { className: 'amv-metrics-label' }, t('metricOccupied')),
+          h('span', { className: 'amv-metrics-value' }, formatBytes(size)),
+          h('span', { className: 'amv-dot' }),
+          h('span', { className: 'amv-metrics-label' }, t('metricInjected')),
+          h('span', { className: 'amv-metrics-value' }, formatBytes(stats.injectBytes)),
+          h('span', { className: 'amv-dot' }),
+          h('span', { className: 'amv-metrics-label' }, t('metricChars')),
+          h('span', { className: 'amv-metrics-value' }, String(stats.chars)),
+          h('span', { className: 'amv-dot' }),
+          h('span', { className: 'amv-metrics-label' }, t('metricTokens')),
+          h('span', { className: 'amv-metrics-value' }, t('metricTokensApprox').replace('{n}', String(stats.tokens))),
+        );
+
       // 徽章语义要区分作用域：只有 DSH 自己的规则才谈得上「会不会被 DSH 加载」，
       // 第三方工具的文件是给对应工具读的，说「DSH 会加载」会误导。
       const badgeOf = (status, scope) => {
@@ -1427,8 +1515,24 @@ window.__ModuleLoader__.load({
       };
 
       // ── 面板：第三方集中 ────────────────────────────────────────────────
-      // 每个工具一张卡：已安装的列出规则文件，未安装的折叠成一行灰字。
-      // 这样默认看到的是「你真正装了并写了规则的工具」，不被 11 个工具淹掉。
+      // 不再纵向铺开全部工具：改为「子Tab 切换各 Agent 工具」。
+      // 已安装工具各占一个子Tab（头部带文件数与 token 汇总），自定义工具固定为最后一个
+      // 子Tab；未安装的仍折叠在底部「未检测到」块里 —— 子Tab栏只留真正有文件可管的工具。
+      const CUSTOM_TAB = '__custom__';
+
+      // 工具级汇总：Σ注入字节 + Σ估算 token（文件级 stats 由 Host 扫描时算好）。
+      // files 与 _abs 一一对应，sharedWith 也在同一下标 —— 这里只读对外字段。
+      const toolSummary = (tool) => {
+        let injectBytes = 0;
+        let tokens = 0;
+        for (const f of tool.files || []) {
+          if (!f.stats) continue;
+          injectBytes += f.stats.injectBytes || 0;
+          tokens += f.stats.tokens || 0;
+        }
+        return { injectBytes, tokens };
+      };
+
       const thirdPane = () => {
         const tools = (state && state.thirdParty) || [];
         if (!tools.length) {
@@ -1437,8 +1541,60 @@ window.__ModuleLoader__.load({
         const installed = tools.filter((tool) => tool.installed);
         const absent = tools.filter((tool) => !tool.installed);
 
-        const toolCard = (tool) =>
+        // 生效的子Tab：用户选过的优先；否则默认第一个已安装工具；
+        // 一个已安装工具都没有时直接落到「自定义工具」（此时它是唯一可用内容）
+        const activeTab = thirdTab && (thirdTab === CUSTOM_TAB || installed.some((tool) => tool.id === thirdTab))
+          ? thirdTab
+          : installed.length
+            ? installed[0].id
+            : CUSTOM_TAB;
+        const activeTool = activeTab && activeTab !== CUSTOM_TAB ? installed.find((tool) => tool.id === activeTab) : null;
+
+        const switchThirdTab = (nextId) => {
+          if (nextId === activeTab) return;
+          resetSelection(); // 换工具必然换文件集合，先清掉旧选中与在途读取
+          setThirdTab(nextId);
+        };
+
+        // 子Tab条：已安装工具 + 固定的「自定义工具」
+        const subtabsEl = h(
+          'div',
+          { className: 'amv-subtabs', role: 'tablist', 'aria-label': t('tabThird') },
+          installed.map((tool) => {
+            const sum = toolSummary(tool);
+            return h(
+              'button',
+              {
+                type: 'button',
+                key: tool.id,
+                role: 'tab',
+                className: 'amv-subtab',
+                'aria-selected': activeTab === tool.id ? 'true' : 'false',
+                title: tool.name,
+                onClick: () => switchThirdTab(tool.id),
+              },
+              tool.name,
+              tool.files.length
+                ? h('span', { className: 'amv-badge amv-badge-plain' }, t('metricSubtab').replace('{n}', String(tool.files.length)).replace('{t}', String(sum.tokens)))
+                : null,
+            );
+          }),
           h(
+            'button',
+            {
+              type: 'button',
+              role: 'tab',
+              className: 'amv-subtab',
+              'aria-selected': activeTab === CUSTOM_TAB ? 'true' : 'false',
+              onClick: () => switchThirdTab(CUSTOM_TAB),
+            },
+            t('customSubtab'),
+          ),
+        );
+
+        const toolCard = (tool) => {
+          const sum = toolSummary(tool);
+          return h(
             'div',
             { className: 'amv-tool', key: tool.id },
             h(
@@ -1454,6 +1610,14 @@ window.__ModuleLoader__.load({
                 Array.isArray(tool.dir) ? tool.dir.join(' · ') : tool.dir,
               ),
             ),
+            // 工具级汇总 + 口径说明（title 悬停给出注入/token 的计算口径）
+            tool.files.length
+              ? h(
+                  'div',
+                  { className: 'amv-tool-note', title: t('metricInjectHint') + '\n' + t('metricTokenHint') },
+                  h('span', null, t('metricToolSummary').replace('{n}', String(tool.files.length)).replace('{b}', formatBytes(sum.injectBytes)).replace('{t}', String(sum.tokens))),
+                )
+              : null,
             // 工具说明：产品状态（已被取代 / 已停维护 / 账户级不可编辑等）直接影响
             // 用户该不该在这里改，所以放在显眼位置而不是藏进 tooltip。
             tool.note ? h('div', { className: 'amv-tool-note' }, IconInfo(11), h('span', null, tool.note)) : null,
@@ -1470,14 +1634,14 @@ window.__ModuleLoader__.load({
               ? h('div', { className: 'amv-list' }, tool.files.map((f) => rowOf(f)))
               : h('div', { className: 'amv-tool-empty' }, t('thirdNoRules')),
           );
+        };
 
         return h(
           'div',
           { className: 'amv-pane' },
-          customPanel(),
-          installed.length
-            ? h('div', { className: 'amv-cards' }, installed.map(toolCard))
-            : h('div', { className: 'amv-card-hint' }, t('thirdNoneInstalled')),
+          subtabsEl,
+          // activeTab 恒有值：有已安装工具时默认第一个，否则落到「自定义工具」
+          activeTab === CUSTOM_TAB ? customPanel() : toolCard(activeTool),
           absent.length
             ? h(
                 'div',
@@ -1542,6 +1706,10 @@ window.__ModuleLoader__.load({
         // 直接读 entry 会短暂显示旧大小），拿不到时退回清单里的值。
         const metaSize = doc && docState === 'ready' && typeof doc.size === 'number' ? doc.size : entry.size;
         const metaMtime = doc && docState === 'ready' && doc.mtime !== undefined ? doc.mtime : entry.mtime;
+        // 四项指标：以 /read 到手的内容为准（与磁盘一致）；清单里 Host 扫描算好的
+        // entry.stats 只在内容还没读出来时充当占位，避免数字闪变。
+        const statsSource = docState === 'ready' && doc && typeof doc.content === 'string' ? doc.content : null;
+        const liveStats = statsSource !== null ? injectionStats(statsSource) : entry.stats || null;
 
         const modeSwitch = canEdit
           ? h(
@@ -1619,6 +1787,9 @@ window.__ModuleLoader__.load({
               'div',
               { className: 'amv-editor-bar' },
               h('span', { className: 'amv-stat' }, t('bytesCount').replace('{n}', String(draftBytes))),
+              h('span', { className: 'amv-stat' }, t('metricInjected') + ' ' + formatBytes(draftStats.injectBytes)),
+              h('span', { className: 'amv-stat' }, t('metricChars') + ' ' + String(draftStats.chars)),
+              h('span', { className: 'amv-stat' }, t('metricTokens') + ' ' + t('metricTokensApprox').replace('{n}', String(draftStats.tokens))),
               h('span', { className: 'amv-kbd' }, t('ctrlS')),
               dirty ? h('span', { className: 'amv-dirty' }, h('span', { className: 'amv-dot' }), t('unsaved')) : null,
               over ? h('span', { className: 'amv-over' }, t('tooLarge')) : null,
@@ -1722,6 +1893,15 @@ window.__ModuleLoader__.load({
               'div',
               { className: 'amv-meta-main' },
               h('div', { className: 'amv-meta-path' }, entry.displayPath),
+              // 四项指标：占用字节 / 注入字节 / 已用字数 / token 估算（口径见悬停提示）
+              liveStats
+                ? metricsEl(liveStats, metaSize)
+                : h(
+                    'div',
+                    { className: 'amv-metrics' },
+                    h('span', { className: 'amv-metrics-label' }, t('metricOccupied')),
+                    h('span', { className: 'amv-metrics-value' }, formatBytes(metaSize)),
+                  ),
               h(
                 'div',
                 { className: 'amv-meta-sub' },

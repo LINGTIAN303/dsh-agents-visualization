@@ -700,6 +700,54 @@ async function readTrimmed(absPath) {
 }
 
 /**
+ * 判断一个码点是否属于中日韩表意文字 / 假名 / 谚文区块。
+ * token 估算用：这些字符在主流分词器里通常 1 字 ≈ 1 token。
+ * @param {number} cp - 码点。
+ * @returns {boolean} 是否 CJK 字符。
+ */
+function isCjkCodePoint(cp) {
+  return (
+    (cp >= 0x4e00 && cp <= 0x9fff) ||
+    (cp >= 0x3400 && cp <= 0x4dbf) ||
+    (cp >= 0x20000 && cp <= 0x2a6df) ||
+    (cp >= 0xf900 && cp <= 0xfaff) ||
+    (cp >= 0x3040 && cp <= 0x30ff) ||
+    (cp >= 0xac00 && cp <= 0xd7af)
+  )
+}
+
+/**
+ * 按注入口径统计一段规则文本：{ injectBytes, chars, tokens }。
+ *
+ * 口径：剥掉文件头 YAML frontmatter（Cursor 系 .mdc 常见，元数据不会注入上下文）
+ * 再 trim 首尾空白 —— 代表工具真正会注入上下文的有效内容。
+ *
+ * token 是启发式估算而非精确分词：CJK 字符按 1 字 ≈ 1 token，
+ * 其余按 4 字符 ≈ 1 token（业界通行的粗估口径），仅供量级参考。
+ * 客户端（client.js 的 injectionStats）保持同一口径，两端数字必须一致。
+ * @param {string} text - 原始文本。
+ * @returns {{ injectBytes: number, chars: number, tokens: number }}
+ */
+function injectionStats(text) {
+  const source = typeof text === 'string' ? text : ''
+  const m = /^---[ \t]*\r?\n([\s\S]*?)\r?\n?---[ \t]*(?:\r?\n|$)/.exec(source)
+  const body = (m ? source.slice(m[0].length) : source).trim()
+  let cjk = 0
+  let other = 0
+  // for...of 按码点迭代：代理对（emoji 等）只计一次，「字数」不会被拆成两半
+  for (const ch of body) {
+    const cp = ch.codePointAt(0) ?? 0
+    if (isCjkCodePoint(cp)) cjk++
+    else other++
+  }
+  return {
+    injectBytes: Buffer.byteLength(body, 'utf8'),
+    chars: cjk + other,
+    tokens: cjk + Math.ceil(other / 4),
+  }
+}
+
+/**
  * 按路径串行的写队列。
  *
  * 为什么需要：`/write` 的「比对 expectedVersion → 落盘」是两步。
@@ -1247,9 +1295,17 @@ async function scanThirdParty(userTools = []) {
   for (const tool of out) {
     for (const real of tool._abs) {
       if (!real.exists || real.size === 0) continue
-      const text = await readTrimmed(real.absPath)
-      if (text === undefined) continue
-      real._digest = createHash('sha256').update(text).digest('hex')
+      // 全文读一次：哈希比对（trim 后）与注入统计（原文剥 frontmatter）共用，
+      // 不为统计增加第二次 IO。
+      let raw
+      try {
+        raw = (await readBounded(real.absPath, { size: real.size })).content
+      } catch {
+        continue
+      }
+      const trimmed = raw.trim()
+      real._digest = createHash('sha256').update(trimmed).digest('hex')
+      real._stats = injectionStats(raw)
       const list = byDigest.get(real._digest) ?? []
       list.push(`${tool.name}/${real.name}`)
       byDigest.set(real._digest, list)
@@ -1261,6 +1317,7 @@ async function scanThirdParty(userTools = []) {
       const real = tool._abs[i]
       if (real === undefined || real._digest === undefined) { file.sharedWith = []; continue }
       file.sharedWith = (byDigest.get(real._digest) ?? []).filter((n) => n !== `${tool.name}/${file.name}`)
+      file.stats = real._stats ?? null
     }
   }
 

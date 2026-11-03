@@ -2,16 +2,17 @@
 
 https://github.com/LINGTIAN303/dsh-agents-visualization
 
-npm: `dsh-agents-visualization@0.1.1`
+npm: `dsh-agents-visualization@0.1.4`
 
 ### 简短说明 / Summary
 
-在 DSH 设置里集中查看、创建与编辑 AGENTS.md 等 AI 规则文件：项目级跟随工作区目录链（与 `dsh-agent-instructions` 的加载规则一致），全局级覆盖 `~/.dsh` 与 `~/.agents`，另有一个「第三方集中」Tab 管理 25 个 AI 工具（Claude Code / Codex / Cursor / TRAE / CodeBuddy / OpenCode / Windsurf / Cline / Copilot 等）的用户级规则文件。
+在 DSH 设置里集中查看、创建与编辑 AGENTS.md 等 AI 规则文件：项目级跟随工作区目录链（与 `dsh-agent-instructions` 的加载规则一致），全局级覆盖 `~/.dsh` 与 `~/.agents`，另有一个「第三方集中」Tab 按子 Tab 管理 25+ 个 AI 工具（Claude Code / Codex / Cursor / TRAE / CodeBuddy / OpenCode / Windsurf / Cline / Copilot 等）的用户级规则文件。
 
 主要能力：
 
 - Markdown 渲染态预览（`.mdc` 的 YAML frontmatter 自动剥离），可切源码视图
 - 就地编辑，`Ctrl/Cmd + S` 保存，冲突时提示覆盖或重新读取
+- 注入统计：每个规则文件显示 占用字节 / 注入字节 / 已用字数 / token 占用（估算），工具级汇总
 - 跨工具共用检测：内容完全相同的规则文件互相标注（SHA-256 全文比对）
 - 启发式发现内置清单之外的工具；支持在设置页用 JSON 追加自定义工具
 - 零运行时依赖

@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "规则",
-    "description": "在设置里查看、创建与编辑 AGENTS.md：项目级跟随工作区目录链，全局级覆盖 ~/.dsh 与 ~/.agents。预览态直接渲染 Markdown。"
+    "description": "在设置里查看、创建与编辑 AGENTS.md：项目级跟随工作区目录链，全局级覆盖 ~/.dsh 与 ~/.agents，第三方工具按子 Tab 集中管理并显示注入字节 / 字数 / token 统计。预览态直接渲染 Markdown。"
   }
 }
