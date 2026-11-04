@@ -45,6 +45,7 @@
 - 前缀路由：`webServer.register({ kind: 'prefix', path: '/dsh-agents-visualization/api' })`
 - 同源 `fetch('/dsh-agents-visualization/api/...')`，浏览器自动携带凭据，无需额外请求头
 - 所有响应 `content-type: application/json; charset=utf-8`，`cache-control: no-store`
+- 接口清单：`GET /state`、`GET /read`、`POST /write`、`GET|POST /user-tools`、`POST /reveal`
 
 ### 3.1 信任校验
 
@@ -178,7 +179,20 @@
 校验项：`id` / `name` 非空、`id` 不含 `: / \`、`targets` 至少一项、`segments` 非空且无 `..` / 绝对路径、
 `id` 不重复、条目数 ≤ 200。
 
-### 3.6 错误响应统一形状
+### 3.6 `POST /reveal`
+
+在系统文件资源管理器里定位文件。请求体 `{ "workspaceId": "<id> | null", "key": "…" }`。
+
+- 与 /read、/write 同一安全模型：key 必须命中本次重算的允许集合，否则 `400 BAD_KEY`
+- 文件不存在（未创建的候选）→ `404 NOT_FOUND`（「定位」一个不存在的文件没有意义）
+- 平台行为：win32 `explorer /select,<file>`；darwin `open -R <file>`；linux `xdg-open <父目录>`
+- spawn 参数为固定字面量 + 查表所得路径，数组传递不经 shell，无注入面
+- Windows 上 `explorer /select` 在已有实例时以非零码退出属正常行为，不视为失败
+- spawn 无法启动 → `500 INTERNAL`
+
+成功：`{ "ok": true }`
+
+### 3.7 错误响应统一形状
 
 ```jsonc
 { "ok": false, "code": "BAD_KEY" | "NOT_FOUND" | "STALE" | "TOO_LARGE" | "FORBIDDEN" | "INTERNAL", "error": "人类可读说明" }
@@ -258,13 +272,25 @@ key 只由 Host 生成与校验；**客户端永远不发送绝对路径**。
 - 模块 id 必须等于包名；`inject: ['slots', 'locale']`
 - `ctx.effect` 内 `ctx.locale.register('agents-md', { zh, en })`
 - 注册 `settings.section`：`{ name: 'settings.section', id: 'agents-md', order: 8, label: () => t('nav') }`
-- 三个 Tab：**项目级 / 全局级 / 第三方集中**
-- 第三方集中 Tab 内部用**子 Tab 切换各 Agent 工具**：已安装工具各占一个子 Tab
-  （头部带文件数与 token 汇总角标），「自定义工具」固定为最后一个子 Tab；
+- 注册 `settings.section.icon`（DSH `0.2.2+` 声明的槽）：`{ name: 'settings.section.icon',
+  id: 'agents-md', label: 'agents-md icon' }`，组件收 `{ size, active }`，画内联 SVG 文档图标。
+  经 `ctx.slots.inject` 注册 —— 该调用对未声明槽是**等待语义**（`0.2.1` 上挂起不安装、不报错），
+  升级宿主后自动生效，属渐进增强，无需版本探测
+- 三个 Tab：**项目级 / 全局级 / 第三方**
+- 第三方 Tab 内部用**子 Tab 切换各 Agent 工具**：已安装工具各占一个子 Tab
+  （头部带品牌 Logo、文件数与 token 汇总角标），「自定义工具」固定为最后一个子 Tab；
   未安装的工具仍折叠在底部「未检测到」块。切换工具即切换文件集合（选中态清空）
+- 品牌 Logo：`BRAND_PATHS`（内联路径数据，来自 @lobehub/icons static-svg，MIT）+
+  `TOOL_BRAND`（工具 id → 品牌键）渲染为 `BrandIcon(toolId, size)`；
+  映射外的工具回退通用文件图标。渐变 defs（gemini / codebuddy）用固定 `amv-grad-*` id
 - 详情面板内联在选中项下方展开（不堆在页面底部，否则用户点完看不到变化）
 - 详情面板展示四项指标：**占用字节 / 注入字节 / 已用字数 / token 占用（估算）**；
   编辑器底栏实时显示注入字节 / 字数 / token（敲键盘即更新，与 Host 同口径）
+- 详情面板操作区提供**全屏**：`fixed` 覆盖层（`.amv-fs`，z-index 1100 高于设置模态的 1000）
+  渲染同一棵受控组件树（编辑器 / 预览与主区共享 state，双渲染无副作用），
+  `Esc` 退出；`resetSelection`（切文件 / 工作区 / Tab）自动退出；「未创建」空态不提供
+- 文件路径旁（详情面板 + 全局级卡片）提供**资源管理器定位**按钮（仅 exists 时渲染），
+  `POST /reveal` 只发 key；卡片上的按钮 `stopPropagation` 避免触发选中
 - 只用 `--dsw-alias-*` 主题 token 着色；不引入任何 Harness Client 包
 - 图标用内联 SVG，禁止 emoji
 - 所有可见文案走 `t()`，zh / en 两套字典

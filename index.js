@@ -1,10 +1,12 @@
 /**
  * dsh-agents-visualization —— Host 半边实现。
  *
- * 职责：在 `/dsh-agents-visualization/api` 前缀上提供三个只面向本地设置页的接口：
- *   · GET  /state  —— 全局根 + 工作区列表 + 目录链上的全部候选（含缺失项）
- *   · GET  /read   —— 按 key 读取一个候选（1 MiB 截断）
- *   · POST /write  —— 按 key 原子写入（乐观并发校验）
+ * 职责：在 `/dsh-agents-visualization/api` 前缀上提供只面向本地设置页的接口：
+ *   · GET  /state   —— 全局根 + 工作区列表 + 目录链上的全部候选（含缺失项）
+ *   · GET  /read    —— 按 key 读取一个候选（1 MiB 截断）
+ *   · POST /write   —— 按 key 原子写入（乐观并发校验）
+ *   · GET/POST /user-tools —— 自定义工具清单的读取与整表替换
+ *   · POST /reveal  —— 按 key 在系统文件资源管理器里定位文件
  *
  * 契约唯一真相：docs/contract.md。
  * 路径解析规则与 `@deepseek-ai/dsh-home-paths` 逐字对齐（resolveDshHome / resolveAgentsHome /
@@ -17,6 +19,7 @@
  */
 
 import { createHash } from 'node:crypto'
+import { spawn } from 'node:child_process'
 import { mkdir, open, readdir, realpath, rename, rm, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
@@ -49,7 +52,7 @@ const PROJECT_CANDIDATES = [...BASE_CANDIDATES, ...LOCAL_CANDIDATES]
 const ROOT_MARKER = '.git'
 
 // ============================================================================
-// 第三方智能体工具的全局规则文件注册表（「第三方集中」Tab 的数据源）
+// 第三方智能体工具的全局规则文件注册表（「第三方」Tab 的数据源）
 // ============================================================================
 //
 // 每一项描述「一个工具的用户级（全局）规则文件/目录在哪里」。
@@ -1468,7 +1471,7 @@ async function buildScope(ctx, workspaceId) {
 
   const allowed = new Map(records.map((record) => [record.entry.key, record.absPath]))
 
-  // 3) 第三方集中：扫描各工具的用户级规则文件，并把它们并入同一份允许集合。
+  // 3) 第三方：扫描各工具的用户级规则文件，并把它们并入同一份允许集合。
   //    必须用同一份扫描结果同时产出示数据与白名单，否则会出现
   //    「页面上看得见、点开却是 BAD_KEY」的裂缝。
   const thirdParty = await scanThirdParty(userConfig.tools)
@@ -1745,6 +1748,163 @@ async function handleUserTools(ctx, req, res) {
   })
 }
 
+/**
+ * POST /reveal —— 在系统文件资源管理器里定位一个允许集合内的文件。
+ *
+ * 与 /read、/write 同一安全模型：客户端只发 key（绝不发路径），Host 用本次请求
+ * 重算的允许集合查表 —— 表里没有的 key 一律 BAD_KEY，无法用于探测任意路径。
+ * 只做「定位」不做「打开」：给文件管理器的参数是固定字面量 + 查表所得路径，
+ * 不拼接任何来自请求体的字符串，参数经数组传递（spawn 不经 shell，无注入面）。
+ *
+ * 行为按平台：
+ *   win32  —— `explorer /select,<文件>`（定位并选中该文件；已存在才可用）
+ *   darwin —— `open -R <文件>`（Finder 里显示）
+ *   linux  —— `xdg-open <父目录>`（xdg-open 没有 reveal 语义，退化为打开目录）
+ *
+ * @param {any} ctx - Cordis 上下文（未直接使用，保持与其它 handler 同形）。
+ * @param {import('node:http').IncomingMessage} req - 请求对象。
+ * @param {import('node:http').ServerResponse} res - 响应对象。
+ * @returns {Promise<void>}
+ */
+async function handleReveal(ctx, req, res) {
+  let body
+  try {
+    body = JSON.parse((await readBody(req)) || '{}')
+  } catch (error) {
+    if (error?.code === 'TOO_LARGE') sendError(res, 413, 'TOO_LARGE', '请求体超过上限')
+    else sendError(res, 400, 'BAD_KEY', '请求体不是合法 JSON')
+    return
+  }
+  const key = typeof body?.key === 'string' ? body.key : ''
+  const workspaceId = typeof body?.workspaceId === 'string' && body.workspaceId.length > 0 ? body.workspaceId : null
+  const scope = await buildScope(ctx, workspaceId)
+  if (scope.invalidWorkspace) {
+    sendError(res, 400, 'BAD_KEY', 'workspaceId 已失效（工作区可能被删除或改名），请刷新后重试')
+    return
+  }
+  const absPath = scope.allowed.get(key)
+  if (absPath === undefined) {
+    sendError(res, 400, 'BAD_KEY', '未知的文件 key：它不在当前允许集合里（可能已过期或属于别的工作区）')
+    return
+  }
+  // 定位一个不存在的文件没有意义（资源管理器会弹「找不到」），如实回 404
+  const info = await fileInfo(absPath)
+  if (!info.exists) {
+    sendError(res, 404, 'NOT_FOUND', '文件尚未创建，无法定位')
+    return
+  }
+
+  // 平台命令表：argv 数组不经 shell；失败统一 500 INTERNAL
+  // Windows 不直接指望 explorer /select 一次成功：DSH 自己的 open-in-app 注释明说
+  // 「direct explorer.exe spawn does not reliably raise a window」（Electron 子进程
+  // 环境里 /select 请求转交给已运行的 shell 实例时可能不弹窗）。所以分两级：
+  //   1) explorer /select,<file> —— 理想情况：打开并选中
+  //   2) 兜底：先用 Shell COM 枚举窗口探测 /select 是否真的弹了窗，
+  //      没弹则经 Shell COM 的 Open 动词打开父目录（见下方 probeExplorerWindow /
+  //      openDirectoryViaShell）—— 与资源管理器同源的 shell 通道，绕开直接 spawn 的不可靠性
+  const platform = process.platform
+  let command
+  let args
+  if (platform === 'win32') {
+    command = 'explorer.exe'
+    args = [`/select,${absPath}`]
+  } else if (platform === 'darwin') {
+    command = 'open'
+    args = ['-R', absPath]
+  } else {
+    command = 'xdg-open'
+    args = [dirname(absPath)]
+  }
+
+  try {
+    await new Promise((resolveOutcome, rejectOutcome) => {
+      // 注意 spawn 选项：不能用 detached —— Electron 子进程环境里 detached 的
+      // explorer /select 转交后不弹窗（「请求 200 但毫无反应」的根因）。
+      // stdio: 'ignore' 保留：explorer 的输出无意义，避免管道悬挂。
+      const child = spawn(command, args, { stdio: 'ignore' })
+      // explorer /select 在文件管理器已在运行时会立即返回且 exit code 非零（1），
+      // 这是它的正常行为而不是失败 —— 所以 Windows 上不把非零退出当错误，
+      // 只把「进程无法启动」（spawn error）当失败。
+      child.on('error', rejectOutcome)
+      child.on('spawn', () => resolveOutcome())
+    })
+  } catch (error) {
+    sendError(res, 500, 'INTERNAL', `无法启动文件资源管理器：${error?.message ?? error}`)
+    return
+  }
+
+  // Windows 兜底：/select 的窗口可能不出现（Electron 子进程环境的已知坑，
+  // DSH open-in-app 注释同样记载了 direct explorer spawn 不可靠）。
+  // 探测：让 powershell 用 Shell COM 列出当前文件管理器窗口的 LocationURL，
+  // 没看到目标目录/文件的窗口 → 用 Shell COM 的 Open 打开父目录（与资源管理器
+  // 同源的 shell 通道，绕开 explorer.exe 直接 spawn 的不可靠性）；看到了 → 不补发。
+  // 探测本身失败（powershell 不可用/超时）也走兜底 —— 宁可多开一个目录窗口，
+  // 也不能让点击毫无反应。macOS/Linux 没有这个问题，不做兜底。
+  if (platform === 'win32') {
+    const saw = await probeExplorerWindow(absPath)
+    if (!saw) await openDirectoryViaShell(dirname(absPath))
+  }
+  sendJson(res, 200, { ok: true })
+}
+
+/**
+ * 兜底打开目录：Shell COM 的 Open 动词（与资源管理器同源）。脚本经
+ * -EncodedCommand 传递，避开引号与中文路径的转义陷阱；失败静默（主流程已尽力）。
+ * @param {string} dirPath - 要打开的目录绝对路径。
+ * @returns {Promise<void>}
+ */
+async function openDirectoryViaShell(dirPath) {
+  try {
+    const { execFile } = await import('node:child_process')
+    const script = `(New-Object -ComObject Shell.Application).Open('${dirPath.replace(/'/g, "''")}')`
+    const encoded = Buffer.from(script, 'utf16le').toString('base64')
+    await new Promise((res2, rej2) => {
+      execFile(
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded],
+        { timeout: 5000, windowsHide: true },
+        (err) => (err ? rej2(err) : res2()),
+      )
+    })
+  } catch {
+    // 兜底失败不影响主流程：/select 可能已经成功
+  }
+}
+
+/**
+ * 探测 /select 是否真的弹出了窗口：列出现有文件管理器窗口的 LocationURL，
+ * 与目标文件（或其父目录）比对。探测本身失败（如 powershell 不可用）一律返回
+ * false —— 走兜底，宁可多开一个目录窗口也不能毫无反应。
+ * @param {string} absPath - 目标文件绝对路径。
+ * @returns {Promise<boolean>} 窗口已出现（或无法判定时按未出现处理）。
+ */
+async function probeExplorerWindow(absPath) {
+  try {
+    const { execFile } = await import('node:child_process')
+    // 用 -EncodedCommand 避开引号/换行的转义陷阱；脚本列出现有资源管理器窗口的 LocationURL
+    const script =
+      '$output=(New-Object -ComObject Shell.Application).Windows() | ForEach-Object { $_.LocationURL }; $output -join "`n"'
+    const encoded = Buffer.from(script, 'utf16le').toString('base64')
+    const stdout = await new Promise((res2, rej2) => {
+      execFile(
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded],
+        { timeout: 5000, windowsHide: true, encoding: 'utf8' },
+        (err, out) => (err ? rej2(err) : res2(String(out ?? ''))),
+      )
+    })
+    if (!stdout) return false
+    // LocationURL 形如 file:///D:/dir/sub/file.md；目标也归一成同形再比对
+    const norm = (p) => p.toLowerCase().replace(/\\/g, '/')
+    const fileUrl = `file:///${norm(absPath)}`
+    const dirUrl = `file:///${norm(dirname(absPath))}`
+    const text = norm(stdout)
+    return text.includes(fileUrl) || text.includes(dirUrl)
+  } catch {
+    return false
+  }
+}
+
 // ============================================================================
 // 路由分发
 // ============================================================================
@@ -1797,7 +1957,8 @@ async function handleRequest(ctx, req, res) {
   if (path === '/read' && req.method === 'GET') return handleRead(ctx, url, res)
   if (path === '/write' && req.method === 'POST') return handleWrite(ctx, req, res)
   if (path === '/user-tools' && (req.method === 'GET' || req.method === 'POST')) return handleUserTools(ctx, req, res)
-  if (path === '/state' || path === '/read' || path === '/write' || path === '/user-tools') {
+  if (path === '/reveal' && req.method === 'POST') return handleReveal(ctx, req, res)
+  if (path === '/state' || path === '/read' || path === '/write' || path === '/user-tools' || path === '/reveal') {
     sendError(res, 400, 'BAD_KEY', `不支持的请求方法 ${req.method}`)
     return
   }

@@ -13,13 +13,16 @@ AI 编码工具的规则文件散落在各处：DSH 自己读 `~/.dsh/AGENTS.md`
 |---|---|
 | **项目级** | 当前工作区从项目根到 cwd 的整条目录链（`AGENTS.md` / `CLAUDE.md` / `.local` 变体） |
 | **全局级** | `~/.dsh/AGENTS.md` 与 `~/.agents/AGENTS.md` |
-| **第三方集中** | 25+ 个 AI 工具的用户级规则文件，按工具子 Tab 切换 |
+| **第三方** | 25+ 个 AI 工具的用户级规则文件，按工具子 Tab 切换 |
 
 ## 功能
 
 - **真实反映 DSH 的加载规则** —— 与 `@deepseek-ai/dsh-agent-instructions` 同源：向上找 `.git` 定项目根、目录链展开、候选文件名按加载优先级排序，不是「猜一个路径」。
 - **渲染态预览** —— Markdown 直接排版显示（标题 / 列表 / 表格 / 代码块），可切「源码」看原文。`.mdc` 的 YAML frontmatter 会自动剥离。
 - **就地编辑** —— 等宽编辑器、字节计数、未保存标记、`Ctrl/Cmd + S` 保存。
+- **全屏聚焦** —— 编辑器 / 预览可一键放大到设置页允许的最大区域（相当于清屏），再点一次或按 `Esc` 退出。
+- **资源管理器定位** —— 文件路径旁一键调起系统文件管理器定位到该文件（客户端只发 key，不暴露路径）。
+- **工具品牌图标** —— 第三方子 Tab 显示各工具官方 Logo（内联自 [@lobehub/icons](https://github.com/lobehub/lobe-icons) static-svg，MIT，无运行时 CDN 依赖）。
 - **注入统计** —— 详情面板显示 占用字节 / 注入字节 / 已用字数 / token 占用（估算），编辑时实时更新；工具头部汇总整个工具的注入量。注入字节 = 剥离 frontmatter、去首尾空白后的有效内容；token 为启发式估算（CJK 1 字 ≈ 1 token，其余 4 字符 ≈ 1 token）。
 - **并发保护** —— 文件被外部改过时提示冲突，让你选「覆盖」或「重新读取」，不会静默覆盖。
 - **跨工具共用检测** —— 多个工具用同一份内容时标出「内容与 … 完全相同」，避免改一处以为全都改了。
@@ -46,7 +49,7 @@ dsh plugin --profile <profile> add "link:C:\\path\\to\\dsh-agents-visualization"
 1. 打开 DSH → **设置** → 左侧 **「规则」**
 2. 选 Tab，点任意文件即可就地展开详情
 3. 要新建：在「未创建」分组里点对应条目 → 点「创建」
-4. 第三方工具不在清单里？切到「第三方集中」最后一个子 Tab「自定义工具」，按模板改值后保存
+4. 第三方工具不在清单里？切到「第三方」最后一个子 Tab「自定义工具」，按模板改值后保存
 
 ### 自定义工具的配置格式
 
@@ -98,7 +101,7 @@ Claude Code · Codex CLI · Gemini CLI · Cursor · TRAE / TRAE CN · CodeBuddy 
 
 ## 兼容性
 
-- DSH `0.2.x`（在 `0.2.1-rc.5` 上验证）
+- DSH `0.2.x`（在 `0.2.1-rc.5` 与 `0.2.2-rc.1` 上验证；`0.2.2+` 设置导航显示「规则」图标，旧版回退默认齿轮）
 - Node.js `>= 20`
 
 ## 许可
@@ -128,6 +131,10 @@ This plugin puts three scopes on one settings page:
 - **Mirrors how DSH really loads instructions** — same discovery as `@deepseek-ai/dsh-agent-instructions`: walk up to the `.git` marker, expand the ancestor chain, order candidates by loading priority.
 - **Rendered preview** — Markdown is typeset (headings, lists, tables, code blocks); switch to "Source" for the raw text. YAML frontmatter in `.mdc` files is stripped automatically.
 - **Inline editing** — monospace editor, byte counter, unsaved marker, `Ctrl/Cmd + S`.
+- **Fullscreen focus** — enlarge the editor or preview to the maximum area the settings page allows (a clearing overlay); click again or press `Esc` to exit.
+- **Reveal in file manager** — a button next to each file path asks the Host to locate the file in the system file manager (the browser only ever sends a key, never a path).
+- **Tool brand icons** — third-party sub-tabs show each tool's official logo (inlined from [@lobehub/icons](https://github.com/lobehub/lobe-icons) static-svg, MIT; no runtime CDN dependency).
+- **Injection stats** — the detail panel shows on-disk bytes, injected bytes, characters and estimated tokens, live while editing; each tool's header sums its total injection. Injected bytes = content after stripping frontmatter and trimming; tokens are heuristic (CJK ≈ 1 token per character, else ≈ 1 token per 4 characters).
 - **Conflict protection** — when the file changed on disk you get a conflict prompt and choose to overwrite or reload.
 - **Cross-tool duplicate detection** — flags files whose content is identical to another tool's, so you do not assume one edit propagates everywhere.
 - **Auto-discovery** — tools outside the built-in list are picked up when their directory contains `AGENTS.md` or a `rules/` folder.
@@ -181,7 +188,7 @@ Persisted to `~/.dsh/agents-visualization.json`:
 
 ## Compatibility
 
-- DSH `0.2.x` (verified on `0.2.1-rc.5`)
+- DSH `0.2.x` (verified on `0.2.1-rc.5` and `0.2.2-rc.1`; on `0.2.2+` the settings nav shows a Rules icon, older versions fall back to the default gear)
 - Node.js `>= 20`
 
 ## License
