@@ -206,10 +206,13 @@ window.__ModuleLoader__.load({
       '.amv-hl{position:absolute;inset:0;margin:0;padding:11px 12px;overflow:hidden;white-space:pre;background:transparent;font-family:' + MONO + ';font-size:12.5px;line-height:1.6;tab-size:2;color:var(--dsw-alias-label-primary);pointer-events:none}',
       '.amv-input{position:absolute;inset:0;width:100%;height:100%;box-sizing:border-box;padding:11px 12px;border:none;outline:none;resize:none;background:transparent;color:transparent;caret-color:var(--dsw-alias-label-primary);font-family:' + MONO + ';font-size:12.5px;line-height:1.6;tab-size:2;white-space:pre;overflow:auto}',
       '.amv-input::selection{background:color-mix(in srgb,var(--dsw-alias-brand-primary) 32%,transparent)}',
-      // 着色谱：全部取主题 token —— 标题/链接用品牌色，代码用成功色，标记用警示色，
+      // 着色谱：全部取主题 token —— 标题用品牌色，代码用成功色，标记用警示色，
       // frontmatter 与表格线退为次级文字色；选中时整块底色可见、字形仍由下层着色呈现
       '.amv-hl-h{color:var(--dsw-alias-brand-primary);font-weight:600}',
+      '.amv-hl-b{font-weight:600}',
+      '.amv-hl-i{font-style:italic;color:var(--dsw-alias-label-secondary)}',
       '.amv-hl-c{color:var(--dsw-alias-state-success-primary)}',
+      '.amv-hl-l{color:var(--dsw-alias-brand-primary);text-decoration:underline}',
       '.amv-hl-m{color:var(--dsw-alias-state-warn-primary)}',
       '.amv-hl-q{color:var(--dsw-alias-state-idle-primary)}',
       '.amv-hl-fm{color:var(--dsw-alias-label-secondary);font-style:italic}',
@@ -246,11 +249,15 @@ window.__ModuleLoader__.load({
       '.amv-fs-pane-hd{display:flex;align-items:center;gap:7px;padding:5px 10px;background:var(--dsw-alias-bg-layer-2);border-bottom:.5px solid var(--dsw-alias-border-l2);flex-wrap:wrap}',
       '.amv-fs-pane-path{flex:1;min-width:120px;font-family:' + MONO + ';font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.amv-fs-pane-bd{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}',
-      // 对比窗侧的内容区自身滚动（编辑器、预览、源码视图都撑满面板格）
+      // 对比窗侧的内容区自身滚动（编辑器、预览、源码视图都撑满面板格）。
+      // .amv-pv 必须照搬单文件全屏的 flex column 处理：它是「工具条 + 内容」的
+      // 纵向组合，不设 flex 的话渲染内容不产生滚动框，溢出被 overflow:hidden 裁掉
+      //（表现为「预览态滚不动」——编辑态能滚是因为 textarea 自身就有滚动）。
       '.amv-fs-pane-bd .amv-editor,.amv-fs-pane-bd .amv-pv,.amv-fs-pane-bd .amv-cmp-src{flex:1;min-height:0}',
+      '.amv-fs-pane-bd .amv-pv{display:flex;flex-direction:column}',
       '.amv-fs-pane-bd .amv-editwrap{height:auto;flex:1;min-height:0;resize:none}',
       '.amv-fs-pane-bd .amv-md{flex:1;min-height:0;max-height:none}',
-      '.amv-fs-pane-bd .amv-preview{flex:1;min-height:0;max-height:none}',
+      '.amv-fs-pane-bd .amv-preview{flex:1;min-height:0;max-height:none;overflow:auto}',
       '.amv-fs-pane-bd .amv-prebar{flex:none}',
       // 路径行 + 行内小图标按钮（资源管理器定位）
       '.amv-meta-path-row{display:flex;align-items:center;gap:6px;min-width:0}',
@@ -582,12 +589,45 @@ window.__ModuleLoader__.load({
 
     // ── 编辑态 Markdown 语法着色 ───────────────────────────────────────────
     // 叠层高亮：底层 pre 渲染色块，上层透明 textarea 接收输入（光标 caret-color 可见）。
-    // 两层必须逐字符等宽对齐，因此任何输出都不得改变原文长度 —— 逐行解析、
-    // 每个标记的文本内容与原文逐字相同，只附加 className。
+    // 两层必须逐字符等宽对齐，因此任何输出都不得改变原文长度 —— 每个标记的
+    // 文本内容与原文逐字相同，只附加 className。
+    /**
+     * 行内着色：粗体 / 斜体 / 行内代码 / 链接，文本原样切分、只包 className。
+     * 与渲染态 inline() 同一套识别顺序（代码最先，防止内部符号被再解析）。
+     * @param {string} text - 行内文本
+     * @param {string} keyPrefix - React key 前缀
+     * @returns {Array} React 子节点数组
+     */
+    function hlInline(text, keyPrefix) {
+      const out = [];
+      const re = /`([^`]+)`|\[([^\]]*)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*|__([^_]+)__|\*([^*\n]+)\*|_([^_\n]+)_/g;
+      let last = 0;
+      let m;
+      let n = 0;
+      const push = (cls, str) => {
+        if (!str) return;
+        out.push(cls ? h('span', { key: keyPrefix + '-' + n++, className: cls }, str) : str);
+      };
+      while ((m = re.exec(text)) !== null) {
+        push(null, text.slice(last, m.index));
+        if (m[1] !== undefined) push('amv-hl-c', m[0]);
+        else if (m[2] !== undefined) {
+          // 链接：[文字](url) 整段品牌色；文字与括号逐字保留
+          push(/^https?:\/\//i.test(m[3]) ? 'amv-hl-l' : null, m[0]);
+        } else if (m[4] !== undefined && m[4].length > 0) push('amv-hl-b', m[0]);
+        else if (m[5] !== undefined && m[5].length > 0) push('amv-hl-b', m[0]);
+        else if (m[6] !== undefined && m[6].length > 0) push('amv-hl-i', m[0]);
+        else if (m[7] !== undefined && m[7].length > 0) push('amv-hl-i', m[0]);
+        last = re.lastIndex;
+      }
+      push(null, text.slice(last));
+      return out;
+    }
+
     /**
      * 把一段 Markdown 文本按行着色，输出 React 元素数组。
-     * 解析只认行级语法（标题/围栏/引用/列表标记/表格线/分割线/frontmatter），
-     * 行内不拆分 —— textarea 的换行折叠与 pre 一致（white-space:pre），逐行输出已足够。
+     * 行级定基调（标题/围栏/引用/表格线/分割线/frontmatter），行内再走 hlInline；
+     * 列表行只给行首标记上警示色，正文交给行内着色，避免整行继承标记色。
      * @param {string} src - 编辑器当前文本
      * @returns {Array} React 子节点数组
      */
@@ -627,14 +667,23 @@ window.__ModuleLoader__.load({
           out.push(h('span', { key: k, className: 'amv-hl-c' }, line + nl));
           continue;
         }
-        // 标题
+        // 标题：整行品牌色加粗，行内的强调标记不再二次着色
         if (/^\s{0,3}#{1,6}\s/.test(line)) {
           out.push(h('span', { key: k, className: 'amv-hl-h' }, line + nl));
           continue;
         }
-        // 引用（含嵌套 > 与引用内的列表标记一起着色）
+        // 引用（含嵌套 >）：行首标记退色，内部正文行走行内着色
         if (/^\s{0,3}>/.test(line)) {
-          out.push(h('span', { key: k, className: 'amv-hl-q' }, line + nl));
+          const qm = /^(\s{0,3}>\s?)(.*)$/.exec(line);
+          out.push(
+            h(
+              'span',
+              { key: k, className: 'amv-hl-q' },
+              qm[1],
+              h('span', { key: k + '-b' }, hlInline(qm[2], k)),
+              nl,
+            ),
+          );
           continue;
         }
         // 表格行（含分隔行）
@@ -647,20 +696,21 @@ window.__ModuleLoader__.load({
           out.push(h('span', { key: k, className: 'amv-hl-hr' }, line + nl));
           continue;
         }
-        // 列表标记 + 其余正文：只给行首的标记上色，正文保持默认色
+        // 列表行：只给行首标记上色，正文交给行内着色（否则整行继承标记色）
         const li = /^(\s*)([-*+]|\d{1,9}[.)])(\s+)(.*)$/.exec(line);
         if (li) {
           out.push(
             h(
               'span',
-              { key: k, className: 'amv-hl-m' },
-              li[1] + li[2],
-              h('span', { key: k + '-t' }, li[3] + li[4] + nl),
+              { key: k },
+              h('span', { key: k + '-m', className: 'amv-hl-m' }, li[1] + li[2] + li[3]),
+              hlInline(li[4], k),
+              nl,
             ),
           );
           continue;
         }
-        out.push(h('span', { key: k }, line + nl));
+        out.push(h('span', { key: k }, hlInline(line, k), nl));
       }
       return out;
     }
