@@ -188,6 +188,9 @@
 - 平台行为：win32 `explorer /select,<file>`；darwin `open -R <file>`；linux `xdg-open <父目录>`
 - spawn 参数为固定字面量 + 查表所得路径，数组传递不经 shell，无注入面
 - Windows 上 `explorer /select` 在已有实例时以非零码退出属正常行为，不视为失败
+- Windows 兜底探测带退避（×3 次、间隔 350ms）：`/select` 转交到窗口出现有延迟，
+  单次过急探测会把「还没弹」误判成「没弹」而重复打开（双重对话框）；任一次
+  探测命中目标窗口即停，预算耗尽仍未出现才经 Shell COM 补开父目录
 - spawn 无法启动 → `500 INTERNAL`
 
 成功：`{ "ok": true }`
@@ -289,6 +292,16 @@ key 只由 Host 生成与校验；**客户端永远不发送绝对路径**。
 - 详情面板操作区提供**全屏**：`fixed` 覆盖层（`.amv-fs`，z-index 1100 高于设置模态的 1000）
   渲染同一棵受控组件树（编辑器 / 预览与主区共享 state，双渲染无副作用），
   `Esc` 退出；`resetSelection`（切文件 / 工作区 / Tab）自动退出；「未创建」空态不提供
+- 全屏态提供**对比窗**：开启后 `.amv-fs-panel` 挂 `data-wide` 加宽到视口 92%，
+  内容区变成双列网格（`.amv-fs-cmp`）—— 左列当前文件（同一棵受控树，可编辑保存），
+  右列对比文件（复用 `GET /read`，只读源码视图，仅发 key）。对比目标默认取
+  `sharedWith` 命中的第一份，侧头下拉可在全部 exists 候选间切换；关闭对比或
+  未开启时面板维持实测矩形，单文件全屏宽高不变
+- 规则文件编辑器为**双层结构**（`CodeEditor`）：左侧行号条（`.amv-gutter`）+
+  着色层（`pre.amv-hl`，逐行 Markdown 行级语法：标题 / 围栏 / 引用 / 列表标记 /
+  表格行 / 分割线 / frontmatter）+ 透明 textarea（`.amv-input`，caret 可见）。
+  硬约束：着色层输出不得改变原文长度（逐字符对齐前提）；textarea 是唯一滚动源，
+  `onScroll` 同步行号条与着色层。自定义工具的 JSON 文本框仍用普通 `.amv-textarea`
 - 文件路径旁（详情面板 + 全局级卡片）提供**资源管理器定位**按钮（仅 exists 时渲染），
   `POST /reveal` 只发 key；卡片上的按钮 `stopPropagation` 避免触发选中
 - 只用 `--dsw-alias-*` 主题 token 着色；不引入任何 Harness Client 包

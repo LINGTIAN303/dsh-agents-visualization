@@ -1840,11 +1840,39 @@ async function handleReveal(ctx, req, res) {
   // 同源的 shell 通道，绕开 explorer.exe 直接 spawn 的不可靠性）；看到了 → 不补发。
   // 探测本身失败（powershell 不可用/超时）也走兜底 —— 宁可多开一个目录窗口，
   // 也不能让点击毫无反应。macOS/Linux 没有这个问题，不做兜底。
+  //
+  // 「双重对话框」根因：explorer /select 转交给已运行的 shell 实例是**异步**的 ——
+  // spawn 返回（甚至 exit code 1）只代表请求已转交，不代表窗口已经弹出。
+  // 旧实现立刻探测 LocationURL，窗口还没来得及出现 → 误判为「没弹」→ 再补开一次
+  // 父目录，于是同一个文件先 /select 又多开一个目录窗口。修复：给 shell 实例留出
+  // 弹窗时间（多次探测退避，总预算 ~2s），任意一次看到目标窗口就停；只有确认
+  // 预算耗尽仍未出现才补发 Open。失败探测（powershell 不可用）仍然走兜底。
   if (platform === 'win32') {
-    const saw = await probeExplorerWindow(absPath)
+    const saw = await probeExplorerWindowRetry(absPath)
     if (!saw) await openDirectoryViaShell(dirname(absPath))
   }
   sendJson(res, 200, { ok: true })
+}
+
+/**
+ * 带退避的窗口探测：explorer /select 转交后窗口出现有延迟（实测几百毫秒级）。
+ * 首查过急会把「还没弹」误判成「没弹」，触发多余的 Open → 双重对话框。
+ * 探测 ×3，间隔 350ms；任一次命中目标窗口即返回 true。
+ * @param {string} absPath - 目标文件绝对路径。
+ * @returns {Promise<boolean>} 窗口已出现（或无法判定时按未出现处理）。
+ */
+async function probeExplorerWindowRetry(absPath) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await sleep(350)
+    const saw = await probeExplorerWindow(absPath)
+    if (saw) return true
+  }
+  return false
+}
+
+/** 定时器 Promise（探测退避用）。 */
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms))
 }
 
 /**
@@ -1875,6 +1903,8 @@ async function openDirectoryViaShell(dirPath) {
  * 探测 /select 是否真的弹出了窗口：列出现有文件管理器窗口的 LocationURL，
  * 与目标文件（或其父目录）比对。探测本身失败（如 powershell 不可用）一律返回
  * false —— 走兜底，宁可多开一个目录窗口也不能毫无反应。
+ * 调用方（probeExplorerWindowRetry）负责退避：/select 转交到窗口出现有延迟，
+ * 单次过急的探测会把「还没弹」误判成「没弹」，导致重复打开（双重对话框）。
  * @param {string} absPath - 目标文件绝对路径。
  * @returns {Promise<boolean>} 窗口已出现（或无法判定时按未出现处理）。
  */

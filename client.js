@@ -191,19 +191,47 @@ window.__ModuleLoader__.load({
       '.amv-shared-note{display:flex;align-items:flex-start;gap:7px;padding:8px 11px;font-size:11.5px;line-height:17px;color:var(--dsw-alias-state-warn-primary);background:color-mix(in srgb,var(--dsw-alias-state-warn-primary) 9%,var(--dsw-alias-bg-layer-1));border-bottom:.5px solid var(--dsw-alias-border-l2);word-break:break-word}',
       // 编辑区
       '.amv-editor{display:flex;flex-direction:column}',
+      // 自定义工具的 JSON 文本框仍用普通 textarea；规则文件编辑器走「高亮层 + 透明 textarea」双层结构
       '.amv-textarea{display:block;width:100%;box-sizing:border-box;min-height:260px;height:340px;padding:11px 12px;border:none;outline:none;resize:vertical;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-family:' + MONO + ';font-size:12.5px;line-height:1.6;tab-size:2}',
       '.amv-textarea:focus-visible{box-shadow:inset 0 0 0 1px var(--dsw-alias-brand-primary)}',
+      // 编辑器双层结构：行号条 + 代码盒（高亮层在下、textarea 在上）。
+      // 对齐是硬约束：两层与 textarea 的字体 / 字号 / 行高 / padding / tab-size 必须逐项一致，
+      // 否则着色会与光标错位；textarea 文字透明、光标可见，看到的着色来自下层。
+      // resize 挂在包裹层上（textarea absolute 后自身 resize 不会带动行号与高亮层）。
+      '.amv-editwrap{display:flex;height:340px;min-height:260px;overflow:hidden;resize:vertical;background:var(--dsw-alias-bg-base);border:.5px solid var(--dsw-alias-border-l2);border-radius:6px}',
+      '.amv-editwrap:focus-within{border-color:var(--dsw-alias-brand-primary)}',
+      '.amv-gutter{flex:none;min-width:36px;overflow:hidden;padding:11px 0 0;text-align:right;background:var(--dsw-alias-bg-layer-2);border-right:.5px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);font-family:' + MONO + ';font-size:11px;line-height:20px;white-space:pre;user-select:none}',
+      '.amv-gutter-num{display:block;font-family:inherit;font-size:inherit;padding:0 8px 0 6px}',
+      '.amv-codebox{position:relative;flex:1;min-width:0;overflow:hidden}',
+      '.amv-hl{position:absolute;inset:0;margin:0;padding:11px 12px;overflow:hidden;white-space:pre;background:transparent;font-family:' + MONO + ';font-size:12.5px;line-height:1.6;tab-size:2;color:var(--dsw-alias-label-primary);pointer-events:none}',
+      '.amv-input{position:absolute;inset:0;width:100%;height:100%;box-sizing:border-box;padding:11px 12px;border:none;outline:none;resize:none;background:transparent;color:transparent;caret-color:var(--dsw-alias-label-primary);font-family:' + MONO + ';font-size:12.5px;line-height:1.6;tab-size:2;white-space:pre;overflow:auto}',
+      '.amv-input::selection{background:color-mix(in srgb,var(--dsw-alias-brand-primary) 32%,transparent)}',
+      // 着色谱：全部取主题 token —— 标题/链接用品牌色，代码用成功色，标记用警示色，
+      // frontmatter 与表格线退为次级文字色；选中时整块底色可见、字形仍由下层着色呈现
+      '.amv-hl-h{color:var(--dsw-alias-brand-primary);font-weight:600}',
+      '.amv-hl-c{color:var(--dsw-alias-state-success-primary)}',
+      '.amv-hl-m{color:var(--dsw-alias-state-warn-primary)}',
+      '.amv-hl-q{color:var(--dsw-alias-state-idle-primary)}',
+      '.amv-hl-fm{color:var(--dsw-alias-label-secondary);font-style:italic}',
+      '.amv-hl-hr{color:var(--dsw-alias-label-secondary)}',
+      '.amv-hl-t{color:var(--dsw-alias-label-secondary)}',
+      // 只读高亮（对比窗右侧源码视图）：复用 amv-hl-* 色谱，但自己是普通 pre
+      '.amv-cmp-src{white-space:pre;overflow-wrap:normal}',
       '.amv-editor-bar{display:flex;align-items:center;gap:8px;padding:6px 11px;background:var(--dsw-alias-bg-layer-2);border-top:.5px solid var(--dsw-alias-border-l2);flex-wrap:wrap}',
       '.amv-stat{font-size:11.5px;line-height:17px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums}',
       // 全屏：覆盖层用 fixed 兜住整个视口拦截交互，内容容器则**实测设置面板矩形**
       //（role=dialog + data-shortcut-modal="settings"）后绝对定位进去 —— 放大到
       // 「设置页允许的最大区域」即面板宽高本身，不会超出设置页。
+      // 对比态（双文件并列）需要横向空间：面板加宽到视口 92%，以宽度为准、高度随视口；
+      // 单文件全屏维持原样（设置面板矩形），宽高都不变。
       '.amv-fs{position:fixed;inset:0;z-index:1100;background:color-mix(in srgb,var(--dsw-alias-bg-base) 88%,transparent);backdrop-filter:blur(2px)}',
       '.amv-fs-panel{position:absolute;display:flex;flex-direction:column;border:.5px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--dsw-alias-bg-layer-1);box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden}',
+      '.amv-fs-panel[data-wide=true]{width:92vw !important;height:calc(100vh - 48px) !important;left:4vw !important;top:24px !important}',
       '.amv-fs-bar{display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--dsw-alias-bg-layer-2);border-bottom:.5px solid var(--dsw-alias-border-l2);flex-wrap:wrap}',
       '.amv-fs-title{font-size:12.5px;line-height:18px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.amv-fs-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:auto}',
       '.amv-fs-body .amv-editor,.amv-fs-body .amv-pv{flex:1;min-height:0}',
+      '.amv-fs-body .amv-editwrap{height:auto;flex:1;min-height:0;resize:none}',
       '.amv-fs-body .amv-textarea{height:100%;min-height:0;resize:none}',
       '.amv-fs-body .amv-md{max-width:none}',
       // 预览内容默认 max-height:420px（非全屏时防止页面被撑长）；全屏里解除上限
@@ -211,6 +239,19 @@ window.__ModuleLoader__.load({
       '.amv-fs-body .amv-pv{display:flex;flex-direction:column}',
       '.amv-fs-body .amv-md,.amv-fs-body .amv-preview{flex:1;min-height:0;max-height:none}',
       '.amv-fs-btn{align-self:flex-start}',
+      // 对比窗：双列网格（窄容器退化为单列的兜底在下方 media query，宽面板下不触发）
+      '.amv-fs-cmp{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;overflow:hidden}',
+      '.amv-fs-pane{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}',
+      '.amv-fs-pane+.amv-fs-pane{border-left:.5px solid var(--dsw-alias-border-l2)}',
+      '.amv-fs-pane-hd{display:flex;align-items:center;gap:7px;padding:5px 10px;background:var(--dsw-alias-bg-layer-2);border-bottom:.5px solid var(--dsw-alias-border-l2);flex-wrap:wrap}',
+      '.amv-fs-pane-path{flex:1;min-width:120px;font-family:' + MONO + ';font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.amv-fs-pane-bd{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}',
+      // 对比窗侧的内容区自身滚动（编辑器、预览、源码视图都撑满面板格）
+      '.amv-fs-pane-bd .amv-editor,.amv-fs-pane-bd .amv-pv,.amv-fs-pane-bd .amv-cmp-src{flex:1;min-height:0}',
+      '.amv-fs-pane-bd .amv-editwrap{height:auto;flex:1;min-height:0;resize:none}',
+      '.amv-fs-pane-bd .amv-md{flex:1;min-height:0;max-height:none}',
+      '.amv-fs-pane-bd .amv-preview{flex:1;min-height:0;max-height:none}',
+      '.amv-fs-pane-bd .amv-prebar{flex:none}',
       // 路径行 + 行内小图标按钮（资源管理器定位）
       '.amv-meta-path-row{display:flex;align-items:center;gap:6px;min-width:0}',
       '.amv-icon-btn{appearance:none;border:none;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;padding:2px;border-radius:5px;display:inline-flex;flex-shrink:0}',
@@ -241,6 +282,8 @@ window.__ModuleLoader__.load({
       '.amv-inset-b{padding:8px 12px 0}',
       // 窄屏（设置面板被拉窄时）收紧
       '@media (max-width:520px){.amv-row-side{display:none}.amv-select{max-width:100%;min-width:0;width:100%}}',
+      // 对比窗加宽后视口很窄时退回单列，避免两列各自挤成一条缝
+      '@media (max-width:760px){.amv-fs-cmp{grid-template-columns:minmax(0,1fr)}.amv-fs-pane+.amv-fs-pane{border-left:none;border-top:.5px solid var(--dsw-alias-border-l2)}}',
     ].join('');
 
     // ── 文案（zh / en 两套，key 必须一一对应）──────────────────────────────
@@ -305,6 +348,15 @@ window.__ModuleLoader__.load({
       fullscreen: '全屏',
       fullscreenExit: '退出全屏',
       fullscreenHint: '放大到设置页允许的最大区域，专注浏览与编辑；再点一次或按 Esc 退出。',
+      compare: '对比',
+      compareHint: '并列查看两份规则文件：左侧为当前文件，右侧可任选；有共用文件时默认选中第一份。',
+      compareClose: '关闭对比',
+      compareWith: '对比对象',
+      compareReadFail: '读取对比文件失败：{msg}',
+      compareLoading: '读取对比文件…',
+      compareLeft: '当前文件',
+      compareRight: '对比文件',
+      compareOnlyEdit: '仅左侧可编辑',
       dupOf: '内容与 {path} 相同，DSH 只会加载前一份',
       missingTitle: '这个文件还没创建',
       missingBody: '将在 {path} 创建它。创建后可继续编辑，DSH 会在新的会话里加载。',
@@ -406,6 +458,15 @@ window.__ModuleLoader__.load({
       fullscreen: 'Fullscreen',
       fullscreenExit: 'Exit fullscreen',
       fullscreenHint: 'Enlarge this area to the maximum the settings page allows for focused reading and editing; click again or press Esc to exit.',
+      compare: 'Compare',
+      compareHint: 'View two rule files side by side: the left pane is the current file, the right one is selectable; defaults to the first shared file when one exists.',
+      compareClose: 'Close compare',
+      compareWith: 'Compare with',
+      compareReadFail: 'Failed to read the comparison file: {msg}',
+      compareLoading: 'Reading the comparison file…',
+      compareLeft: 'Current file',
+      compareRight: 'Compared file',
+      compareOnlyEdit: 'Left side editable only',
       dupOf: 'Same content as {path}; DSH loads only the first one',
       missingTitle: 'This file does not exist yet',
       missingBody: 'It will be created at {path}. You can keep editing afterwards; DSH loads it in the next session.',
@@ -517,6 +578,146 @@ window.__ModuleLoader__.load({
       if (!e) return 'unknown';
       const code = e.code && String(e.code).indexOf('HTTP_') !== 0 ? e.code + ' · ' : '';
       return code + (e.message || 'unknown');
+    }
+
+    // ── 编辑态 Markdown 语法着色 ───────────────────────────────────────────
+    // 叠层高亮：底层 pre 渲染色块，上层透明 textarea 接收输入（光标 caret-color 可见）。
+    // 两层必须逐字符等宽对齐，因此任何输出都不得改变原文长度 —— 逐行解析、
+    // 每个标记的文本内容与原文逐字相同，只附加 className。
+    /**
+     * 把一段 Markdown 文本按行着色，输出 React 元素数组。
+     * 解析只认行级语法（标题/围栏/引用/列表标记/表格线/分割线/frontmatter），
+     * 行内不拆分 —— textarea 的换行折叠与 pre 一致（white-space:pre），逐行输出已足够。
+     * @param {string} src - 编辑器当前文本
+     * @returns {Array} React 子节点数组
+     */
+    function highlightMarkdown(src) {
+      const text = String(src ?? '');
+      const lines = text.split('\n');
+      const out = [];
+      let inFence = false;
+      let fenceMark = '`';
+      let fenceLen = 3;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const nl = i < lines.length - 1 ? '\n' : '';
+        const k = 'hl-' + i;
+        // frontmatter：文件以 --- 开头时，到第二条 --- 为止整块退色
+        if (i === 0 && /^---[ \t]*$/.test(line)) {
+          out.push(h('span', { key: k, className: 'amv-hl-fm' }, line + nl));
+          continue;
+        }
+        if (out.length > 0 && out[out.length - 1].props.className === 'amv-hl-fm') {
+          if (/^---[ \t]*$/.test(line)) out.push(h('span', { key: k, className: '' }, line + nl));
+          else out.push(h('span', { key: k, className: 'amv-hl-fm' }, line + nl));
+          continue;
+        }
+        // 围栏代码块：开栏着色行本身，内部行整体一个色，直到同长同符的闭栏
+        const fence = /^\s*(`{3,}|~{3,})/.exec(line);
+        if (inFence) {
+          const close = new RegExp('^\\s*' + (fenceMark === '`' ? '`' : '~') + '{' + fenceLen + ',}[ \\t]*$');
+          if (close.test(line)) inFence = false;
+          out.push(h('span', { key: k, className: 'amv-hl-c' }, line + nl));
+          continue;
+        }
+        if (fence) {
+          inFence = true;
+          fenceMark = fence[1][0];
+          fenceLen = fence[1].length;
+          out.push(h('span', { key: k, className: 'amv-hl-c' }, line + nl));
+          continue;
+        }
+        // 标题
+        if (/^\s{0,3}#{1,6}\s/.test(line)) {
+          out.push(h('span', { key: k, className: 'amv-hl-h' }, line + nl));
+          continue;
+        }
+        // 引用（含嵌套 > 与引用内的列表标记一起着色）
+        if (/^\s{0,3}>/.test(line)) {
+          out.push(h('span', { key: k, className: 'amv-hl-q' }, line + nl));
+          continue;
+        }
+        // 表格行（含分隔行）
+        if (/^\s*\|.*\|\s*$/.test(line) || isTableDivider(line)) {
+          out.push(h('span', { key: k, className: 'amv-hl-t' }, line + nl));
+          continue;
+        }
+        // 分割线
+        if (/^\s*([-*_])\s*(\1\s*){2,}$/.test(line)) {
+          out.push(h('span', { key: k, className: 'amv-hl-hr' }, line + nl));
+          continue;
+        }
+        // 列表标记 + 其余正文：只给行首的标记上色，正文保持默认色
+        const li = /^(\s*)([-*+]|\d{1,9}[.)])(\s+)(.*)$/.exec(line);
+        if (li) {
+          out.push(
+            h(
+              'span',
+              { key: k, className: 'amv-hl-m' },
+              li[1] + li[2],
+              h('span', { key: k + '-t' }, li[3] + li[4] + nl),
+            ),
+          );
+          continue;
+        }
+        out.push(h('span', { key: k }, line + nl));
+      }
+      return out;
+    }
+
+    /** 编辑器内容行数（textarea 按 \n 计行，末尾换行也占一行） */
+    function lineCount(text) {
+      const s = String(text ?? '');
+      if (s === '') return 1;
+      return s.split('\n').length;
+    }
+
+    /** 行号条：每行一个块级数字 */
+    function gutterNumbers(count) {
+      const out = [];
+      for (let i = 1; i <= count; i++) out.push(h('span', { key: i, className: 'amv-gutter-num' }, String(i)));
+      return out;
+    }
+
+    /**
+     * 编辑器（行号条 + 着色层 + 透明 textarea）。
+     * 滚动同步：textarea 是唯一滚动源，onScroll 把 scrollTop/Left 写回行号条与着色层。
+     * resize 挂在包裹层，textarea absolute 不参与尺寸计算。
+     * @param {object} p - { value, onChange, onKeyDown, label, lines }
+     * @returns {object} React 元素
+     */
+    function CodeEditor(p) {
+      const hlRef = useRef(null);
+      const gutterRef = useRef(null);
+      const sync = (e) => {
+        const el = e && e.target ? e.target : null;
+        if (!el) return;
+        if (hlRef.current) {
+          hlRef.current.scrollTop = el.scrollTop;
+          hlRef.current.scrollLeft = el.scrollLeft;
+        }
+        if (gutterRef.current) gutterRef.current.scrollTop = el.scrollTop;
+      };
+      return h(
+        'div',
+        { className: 'amv-editwrap' },
+        h('div', { ref: gutterRef, className: 'amv-gutter', 'aria-hidden': 'true' }, gutterNumbers(p.lines)),
+        h(
+          'div',
+          { className: 'amv-codebox' },
+          h('pre', { ref: hlRef, className: 'amv-hl', 'aria-hidden': 'true' }, highlightMarkdown(p.value)),
+          h('textarea', {
+            className: 'amv-input',
+            value: p.value,
+            spellCheck: false,
+            wrap: 'off',
+            'aria-label': p.label,
+            onChange: p.onChange,
+            onKeyDown: p.onKeyDown,
+            onScroll: sync,
+          }),
+        ),
+      );
     }
 
     // ── 极简 Markdown 渲染器 ───────────────────────────────────────────────
@@ -1176,6 +1377,11 @@ window.__ModuleLoader__.load({
       const [thirdTab, setThirdTab] = useState(null);
       // 详情面板全屏态（编辑器 / 预览共用）：true 时渲染 fixed 覆盖层
       const [fullscreen, setFullscreen] = useState(false);
+      // 全屏对比窗：null = 单文件全屏；非 null = 右侧展示该 key 的文件（双列并列）
+      const [cmpKey, setCmpKey] = useState(null);
+      const [cmpDoc, setCmpDoc] = useState(null); // 右侧 /read 结果 { content }
+      const [cmpState, setCmpState] = useState(''); // '' | 'loading' | 'ready' | 'error'
+      const [cmpErr, setCmpErr] = useState('');
 
       const stateSeq = useRef(0); // /state 请求序号：丢弃过期响应
       const readSeq = useRef(0); // /read 请求序号：同上
@@ -1276,6 +1482,8 @@ window.__ModuleLoader__.load({
       // 全屏容器钉进设置面板矩形：面板是居中的 800×800（窄屏时收缩），每次打开
       // 全屏与窗口尺寸变化时实测一次 —— 「放大」的上限就是设置页本身。
       // 兜底：找不到设置面板元素时退回视口 inset 16px（不应发生，但宁可可用）。
+      // 对比态例外：双列并列需要横向空间，CSS 里 !important 加宽到视口 92%，
+      // 这里的内联矩形只作为单文件全屏的基准。
       const [fsRect, setFsRect] = useState(null);
       useEffect(() => {
         if (!fullscreen) {
@@ -1295,6 +1503,47 @@ window.__ModuleLoader__.load({
         window.addEventListener('resize', measure);
         return () => window.removeEventListener('resize', measure);
       }, [fullscreen]);
+
+      // 对比窗右侧文件：候选集合 = 清单里所有 exists 的文件（跨 Tab），排除当前文件。
+      // 只发 key —— 路径解析仍由 Host 完成（契约 §3）。
+      const cmpCandidates = useMemo(() => {
+        if (!state) return [];
+        const out = [];
+        for (const e of (state.globals || []).concat(state.project || [])) {
+          if (e && e.exists && e.key !== selKey) out.push(e);
+        }
+        for (const tool of state.thirdParty || []) {
+          for (const e of (tool && tool.files) || []) {
+            if (e && e.exists && e.key !== selKey) out.push(e);
+          }
+        }
+        return out;
+      }, [state, selKey]);
+
+      // cmpKey 变化时读右侧文件；复用 /read（右侧只读，不参与乐观并发）
+      useEffect(() => {
+        if (!fullscreen || !cmpKey) return undefined;
+        let alive = true;
+        setCmpState('loading');
+        setCmpErr('');
+        apiGet('/read' + qs({ key: cmpKey }))
+          .then((json) => {
+            if (!alive) return;
+            setCmpDoc(json);
+            setCmpState('ready');
+          })
+          .catch((e) => {
+            if (!alive) return;
+            setCmpDoc(null);
+            setCmpState('error');
+            setCmpErr(t('compareReadFail').replace('{msg}', errText(e)));
+          });
+        return () => {
+          alive = false;
+        };
+        // qs 随 ws 变化，但 cmpKey 变化必然伴随重新请求；ws 在会话内极少变
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [fullscreen, cmpKey]);
 
       // 首次挂载就把自定义工具配置读进编辑器：这样用户一进页面看到的就是
       // 「现成的结构或模板」，而不是一个空框等人去点按钮。
@@ -1325,6 +1574,10 @@ window.__ModuleLoader__.load({
         setErr(null);
         setNotice('');
         setFullscreen(false); // 换文件必然换内容，全屏覆盖层随之关闭
+        setCmpKey(null); // 对比目标随当前文件一起失效
+        setCmpDoc(null);
+        setCmpState('');
+        setCmpErr('');
       }, []);
 
       // 切换顶层 Tab 时把子Tab也复位，避免「上次选中的工具」串到下一次
@@ -1503,6 +1756,7 @@ window.__ModuleLoader__.load({
         write(draft, doc.version, false);
       };
 
+      // 编辑器 Ctrl/Cmd+S：挂在 textarea 上（CodeEditor 的 onKeyDown 透传）
       const onEditorKeyDown = (e) => {
         if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === 's' || e.key === 'S')) {
           e.preventDefault();
@@ -2118,14 +2372,14 @@ window.__ModuleLoader__.load({
           const over = draftBytes > MAX_BYTES;
           body = h(
             'div',
-            { className: 'amv-editor', onKeyDown: onEditorKeyDown },
-            h('textarea', {
-              className: 'amv-textarea',
+            { className: 'amv-editor' },
+            // 行号条 + 语法着色 + 透明 textarea 的双层编辑器（CodeEditor）
+            h(CodeEditor, {
               value: draft,
-              spellCheck: false,
-              wrap: 'off',
-              'aria-label': t('editorLabel'),
+              lines: lineCount(draft),
+              label: t('editorLabel'),
               onChange: (e) => setDraft(e.target.value),
+              onKeyDown: onEditorKeyDown,
             }),
             h(
               'div',
@@ -2352,6 +2606,8 @@ window.__ModuleLoader__.load({
           // 全屏覆盖层：把 body 的内容区放大到设置面板允许的最大范围（内容容器
           // 实测设置面板矩形后钉进去，见 fsRect）；fixed 遮罩层负责拦截底层交互。
           // Esc 由全局 capture 监听处理（退出全屏而不关设置页）。
+          // 对比态：cmpKey 非空时双列并列展示（左=当前文件可编辑，右=对比文件只读），
+          // 面板加宽到视口 92%（CSS data-wide）；关掉对比回单列，尺寸与原全屏一致。
           fullscreen && docState === 'ready'
             ? h(
                 'div',
@@ -2360,6 +2616,7 @@ window.__ModuleLoader__.load({
                   'div',
                   {
                     className: 'amv-fs-panel',
+                    'data-wide': cmpKey ? 'true' : 'false',
                     style: fsRect
                       ? { left: fsRect.left, top: fsRect.top, width: fsRect.width, height: fsRect.height }
                       : { left: 16, top: 16, width: 'calc(100vw - 32px)', height: 'calc(100vh - 32px)' },
@@ -2369,6 +2626,34 @@ window.__ModuleLoader__.load({
                     { className: 'amv-fs-bar' },
                     IconFile(14, 'amv-icon-brand'),
                     h('span', { className: 'amv-fs-title', title: entry.displayPath }, entry.displayPath),
+                    // 对比开关：候选至少 1 个才可用；开着时按钮变成「关闭对比」
+                    cmpCandidates.length
+                      ? h(
+                          'button',
+                          {
+                            type: 'button',
+                            className: 'amv-btn',
+                            title: cmpKey ? t('compareClose') : t('compareHint'),
+                            'aria-pressed': cmpKey ? 'true' : 'false',
+                            onClick: () => {
+                              if (cmpKey) {
+                                setCmpKey(null);
+                                setCmpDoc(null);
+                                setCmpState('');
+                                setCmpErr('');
+                              } else {
+                                // 默认目标：有共用文件先选第一份，否则选清单里第一个候选
+                                const shared = entry && entry.sharedWith && entry.sharedWith.length
+                                  ? cmpCandidates.find((c) => entry.sharedWith.some((n) => n.endsWith('/' + c.name)))
+                                  : null;
+                                setCmpKey(shared ? shared.key : cmpCandidates[0].key);
+                              }
+                            },
+                          },
+                          IconExpand(13),
+                          cmpKey ? t('compareClose') : t('compare'),
+                        )
+                      : null,
                     h('div', { className: 'amv-spacer' }),
                     modeSwitch,
                     h(
@@ -2384,9 +2669,65 @@ window.__ModuleLoader__.load({
                       t('fullscreenExit'),
                     ),
                   ),
-                  // 面板底部操作条（保存 / 放弃 / 统计）也要在全屏里可用：
-                  // 编辑态时 body 自带 editor-bar；预览态只有内容，够用了。
-                  h('div', { className: 'amv-fs-body' }, body),
+                  cmpKey
+                    ? h(
+                        'div',
+                        { className: 'amv-fs-cmp' },
+                        // 左：当前文件（完整编辑器 / 预览，与单文件全屏同一棵受控树）
+                        h(
+                          'div',
+                          { className: 'amv-fs-pane' },
+                          h(
+                            'div',
+                            { className: 'amv-fs-pane-hd' },
+                            h('span', { className: 'amv-badge amv-badge-plain' }, t('compareLeft')),
+                            h('span', { className: 'amv-fs-pane-path', title: entry.displayPath }, entry.displayPath),
+                            h('span', { className: 'amv-badge amv-badge-plain' }, t('compareOnlyEdit')),
+                          ),
+                          h('div', { className: 'amv-fs-pane-bd' }, body),
+                        ),
+                        // 右：对比文件（只读）。头部给切换下拉（全部 exists 候选）
+                        h(
+                          'div',
+                          { className: 'amv-fs-pane' },
+                          h(
+                            'div',
+                            { className: 'amv-fs-pane-hd' },
+                            h('span', { className: 'amv-badge amv-badge-plain' }, t('compareRight')),
+                            (() => {
+                              const sel = cmpCandidates.find((c) => c.key === cmpKey);
+                              return h(
+                                'span',
+                                { className: 'amv-fs-pane-path', title: sel ? sel.displayPath : '' },
+                                sel ? sel.displayPath : '',
+                              );
+                            })(),
+                            h(
+                              'select',
+                              {
+                                className: 'amv-select',
+                                style: { height: 24, fontSize: 11.5, minWidth: 0, maxWidth: 200, flexShrink: 1 },
+                                value: cmpKey,
+                                'aria-label': t('compareWith'),
+                                onChange: (e) => setCmpKey(e.target.value),
+                              },
+                              cmpCandidates.map((c) => h('option', { key: c.key, value: c.key }, c.displayPath)),
+                            ),
+                          ),
+                          h(
+                            'div',
+                            { className: 'amv-fs-pane-bd' },
+                            cmpState === 'loading'
+                              ? loadingRow(t('compareLoading'))
+                              : cmpState === 'error'
+                                ? h('div', { className: 'amv-banner amv-banner-err', style: { margin: 10 } }, h('span', { className: 'amv-banner-txt' }, cmpErr))
+                                : cmpDoc && typeof cmpDoc.content === 'string'
+                                  ? h('pre', { className: 'amv-preview amv-cmp-src' }, cmpDoc.content)
+                                  : null,
+                          ),
+                        ),
+                      )
+                    : h('div', { className: 'amv-fs-body' }, body),
                 ),
               )
             : null,

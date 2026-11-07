@@ -19,8 +19,9 @@ AI 编码工具的规则文件散落在各处：DSH 自己读 `~/.dsh/AGENTS.md`
 
 - **真实反映 DSH 的加载规则** —— 与 `@deepseek-ai/dsh-agent-instructions` 同源：向上找 `.git` 定项目根、目录链展开、候选文件名按加载优先级排序，不是「猜一个路径」。
 - **渲染态预览** —— Markdown 直接排版显示（标题 / 列表 / 表格 / 代码块），可切「源码」看原文。`.mdc` 的 YAML frontmatter 会自动剥离。
-- **就地编辑** —— 等宽编辑器、字节计数、未保存标记、`Ctrl/Cmd + S` 保存。
+- **就地编辑** —— 等宽编辑器带 Markdown 语法着色（标题 / 代码块 / 引用 / 列表标记 / 表格 / frontmatter）与行号条，字节计数、未保存标记、`Ctrl/Cmd + S` 保存。
 - **全屏聚焦** —— 编辑器 / 预览可一键放大到设置页允许的最大区域（相当于清屏），再点一次或按 `Esc` 退出。
+- **全屏对比** —— 全屏态可开启双文件并列对比：左侧当前文件可编辑，右侧任选一份只读查看；对比态面板自动加宽，关闭后恢复原尺寸。
 - **资源管理器定位** —— 文件路径旁一键调起系统文件管理器定位到该文件（客户端只发 key，不暴露路径）。
 - **工具品牌图标** —— 第三方子 Tab 显示各工具官方 Logo（内联自 [@lobehub/icons](https://github.com/lobehub/lobe-icons) static-svg，MIT，无运行时 CDN 依赖）。
 - **注入统计** —— 详情面板显示 占用字节 / 注入字节 / 已用字数 / token 占用（估算），编辑时实时更新；工具头部汇总整个工具的注入量。注入字节 = 剥离 frontmatter、去首尾空白后的有效内容；token 为启发式估算（CJK 1 字 ≈ 1 token，其余 4 字符 ≈ 1 token）。
@@ -130,8 +131,9 @@ This plugin puts three scopes on one settings page:
 
 - **Mirrors how DSH really loads instructions** — same discovery as `@deepseek-ai/dsh-agent-instructions`: walk up to the `.git` marker, expand the ancestor chain, order candidates by loading priority.
 - **Rendered preview** — Markdown is typeset (headings, lists, tables, code blocks); switch to "Source" for the raw text. YAML frontmatter in `.mdc` files is stripped automatically.
-- **Inline editing** — monospace editor, byte counter, unsaved marker, `Ctrl/Cmd + S`.
+- **Inline editing** — monospace editor with Markdown syntax highlighting (headings / code fences / quotes / list markers / tables / frontmatter) and a line-number gutter, byte counter, unsaved marker, `Ctrl/Cmd + S`.
 - **Fullscreen focus** — enlarge the editor or preview to the maximum area the settings page allows (a clearing overlay); click again or press `Esc` to exit.
+- **Fullscreen compare** — open a side-by-side compare while fullscreen: the left pane is the current file (editable), the right pane shows any other existing file (read-only source). The panel widens automatically in compare mode and returns to its normal size when closed.
 - **Reveal in file manager** — a button next to each file path asks the Host to locate the file in the system file manager (the browser only ever sends a key, never a path).
 - **Tool brand icons** — third-party sub-tabs show each tool's official logo (inlined from [@lobehub/icons](https://github.com/lobehub/lobe-icons) static-svg, MIT; no runtime CDN dependency).
 - **Injection stats** — the detail panel shows on-disk bytes, injected bytes, characters and estimated tokens, live while editing; each tool's header sums its total injection. Injected bytes = content after stripping frontmatter and trimming; tokens are heuristic (CJK ≈ 1 token per character, else ≈ 1 token per 4 characters).
