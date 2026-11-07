@@ -225,11 +225,12 @@ window.__ModuleLoader__.load({
       // 全屏：覆盖层用 fixed 兜住整个视口拦截交互，内容容器则**实测设置面板矩形**
       //（role=dialog + data-shortcut-modal="settings"）后绝对定位进去 —— 放大到
       // 「设置页允许的最大区域」即面板宽高本身，不会超出设置页。
-      // 对比态（双文件并列）需要横向空间：面板加宽到视口 92%，以宽度为准、高度随视口；
+      // 对比态（双文件并列）需要横向空间：面板加宽到视口 92%，上下各留出空隙
+      // 避开窗口顶部/底部的系统控件与任务栏热区（顶部 44px、底部 32px）；
       // 单文件全屏维持原样（设置面板矩形），宽高都不变。
       '.amv-fs{position:fixed;inset:0;z-index:1100;background:color-mix(in srgb,var(--dsw-alias-bg-base) 88%,transparent);backdrop-filter:blur(2px)}',
       '.amv-fs-panel{position:absolute;display:flex;flex-direction:column;border:.5px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--dsw-alias-bg-layer-1);box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden}',
-      '.amv-fs-panel[data-wide=true]{width:92vw !important;height:calc(100vh - 48px) !important;left:4vw !important;top:24px !important}',
+      '.amv-fs-panel[data-wide=true]{width:92vw !important;height:calc(100vh - 76px) !important;left:4vw !important;top:44px !important}',
       '.amv-fs-bar{display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--dsw-alias-bg-layer-2);border-bottom:.5px solid var(--dsw-alias-border-l2);flex-wrap:wrap}',
       '.amv-fs-title{font-size:12.5px;line-height:18px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       '.amv-fs-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:auto}',
